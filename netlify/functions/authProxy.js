@@ -1,15 +1,14 @@
 exports.handler = async (event) => {
-  // Allow requests from Netlify deployment and localhost for testing
+  // Allow requests from Netlify deployment (including preview URLs) and localhost
   const origin = event.headers.origin || event.headers.Origin || "";
   const allowedOrigins = [
     "https://speazyai.netlify.app",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
   ];
-  
-  // Use the request origin if it's in the allowed list, otherwise use the production origin
-  const allowedOrigin = allowedOrigins.includes(origin) 
-    ? origin 
+  const isNetlifyPreview = origin.includes(".netlify.app");
+  const allowedOrigin = allowedOrigins.includes(origin) || isNetlifyPreview
+    ? origin
     : "https://speazyai.netlify.app";
 
   // Handle CORS preflight

@@ -1,11 +1,23 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useMemo } from "react"
 import { useNavigate, useLocation, useParams } from "react-router-dom"
 import { Button } from "../ui/button"
 import { ArrowLeft, Mic2, BookOpen, PenTool, Headphones } from "lucide-react"
 import { useAuth } from "../../contexts/AuthContext"
 import { getExelerateApiBase } from "../../config/apiConfig"
+import {
+  ChartContainer,
+  ChartTooltip,
+} from "../ui/chart"
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Legend,
+} from "recharts"
 
 interface StudentDetailsData {
   email?: string
@@ -46,6 +58,16 @@ export function StudentDetailsPage() {
   const [isLoadingSkillData, setIsLoadingSkillData] = useState(false)
   const [skillDataError, setSkillDataError] = useState<string | null>(null)
   const [isNotAttempted, setIsNotAttempted] = useState(false)
+
+  // Combined line graph: Speaking, Reading, Writing, Listening (graphs/*.php?user_id=X)
+  const [graphLoading, setGraphLoading] = useState(false)
+  const [graphError, setGraphError] = useState<string | null>(null)
+  const [graphRawSeries, setGraphRawSeries] = useState<Record<string, Array<{ date: string; score: number }>>>({
+    speaking: [],
+    reading: [],
+    writing: [],
+    listening: [],
+  })
   
   const skill = rawStudentData.skill || "speaking"
   const skillLabels: Record<string, string> = {
@@ -171,6 +193,84 @@ export function StudentDetailsPage() {
       setIsLoadingSkillData(false)
     }
   }
+
+  // Fetch graph data (speaking, reading, writing, listening) for combined line chart - when viewing a specific user
+  useEffect(() => {
+    const uid = urlUserId || rawStudentData.id || rawStudentData.user_id || rawStudentData.userId
+    if (!uid || !API_TOKEN) {
+      setGraphRawSeries({ speaking: [], reading: [], writing: [], listening: [] })
+      return
+    }
+    const endpoints = [
+      { key: "speaking" as const, url: `${apiBase}/graphs/speaking.php?user_id=${uid}` },
+      { key: "reading" as const, url: `${apiBase}/graphs/reading.php?user_id=${uid}` },
+      { key: "writing" as const, url: `${apiBase}/graphs/writing.php?user_id=${uid}` },
+      { key: "listening" as const, url: `${apiBase}/graphs/listening.php?user_id=${uid}` },
+    ]
+    let cancelled = false
+    setGraphLoading(true)
+    setGraphError(null)
+    const headers: HeadersInit = { "Content-Type": "application/json", Authorization: `Bearer ${API_TOKEN}` }
+
+    // API returns { success, module, points: [ { x: "2026-02-06", y: 74 }, ... ] }
+    const normalizePoint = (item: any): { date: string; score: number } | null => {
+      const dateStr = item?.x ?? item?.date ?? item?.date_time ?? item?.created_at ?? item?.created_at_date
+      if (!dateStr) return null
+      const d = new Date(dateStr)
+      const dateLabel = isNaN(d.getTime()) ? String(dateStr) : d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
+      const scoreRaw = item?.y ?? item?.score ?? item?.overall_score ?? item?.total_score ?? item?.percentage
+      const score = typeof scoreRaw === "number" ? scoreRaw : typeof scoreRaw === "string" ? parseFloat(scoreRaw) : NaN
+      if (Number.isNaN(score)) return null
+      return { date: dateLabel, score }
+    }
+
+    const fetchOne = async (key: "speaking" | "reading" | "writing" | "listening", url: string) => {
+      try {
+        const res = await fetch(url, { method: "GET", headers })
+        if (!res.ok) return []
+        const data = await res.json()
+        const list = Array.isArray(data?.points)
+          ? data.points
+          : Array.isArray(data?.data)
+            ? data.data
+            : Array.isArray(data?.items)
+              ? data.items
+              : Array.isArray(data)
+                ? data
+                : []
+        return list.map(normalizePoint).filter((p): p is { date: string; score: number } => p != null)
+      } catch {
+        return []
+      }
+    }
+
+    Promise.all(endpoints.map((e) => fetchOne(e.key, e.url)))
+      .then(([speaking, reading, writing, listening]) => {
+        if (cancelled) return
+        setGraphRawSeries({ speaking, reading, writing, listening })
+      })
+      .catch(() => { if (!cancelled) setGraphError("Failed to load graph data") })
+      .finally(() => { if (!cancelled) setGraphLoading(false) })
+    return () => { cancelled = true }
+  }, [urlUserId, rawStudentData.id, rawStudentData.user_id, rawStudentData.userId, apiBase, API_TOKEN])
+
+  // Merge all series by date for the combined line chart (X = date, Y = score, 4 lines)
+  const graphChartData = useMemo(() => {
+    const byDate: Record<string, { date: string; speaking?: number; reading?: number; writing?: number; listening?: number }> = {}
+    const add = (key: "speaking" | "reading" | "writing" | "listening", points: Array<{ date: string; score: number }>) => {
+      points.forEach((p) => {
+        if (!byDate[p.date]) byDate[p.date] = { date: p.date }
+        ;(byDate[p.date] as any)[key] = p.score
+      })
+    }
+    add("speaking", graphRawSeries.speaking)
+    add("reading", graphRawSeries.reading)
+    add("writing", graphRawSeries.writing)
+    add("listening", graphRawSeries.listening)
+    const arr = Object.values(byDate)
+    arr.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    return arr
+  }, [graphRawSeries])
   
   // Merge the base student data with detailed result
   // CRITICAL: rawStudentData takes precedence to ensure correct student info is displayed
@@ -448,6 +548,150 @@ export function StudentDetailsPage() {
               })}
             </div>
           </div>
+
+          {/* Combined line graph: Speaking, Reading, Writing, Listening (only when viewing a specific user) */}
+          {userId && (
+            <div
+              style={{
+                marginBottom: "32px",
+                paddingBottom: "24px",
+                borderBottom: "1px solid rgba(30, 58, 138, 0.1)",
+              }}
+            >
+              <h2
+                style={{
+                  fontSize: "22px",
+                  fontWeight: "bold",
+                  color: "#1E3A8A",
+                  marginBottom: "6px",
+                }}
+              >
+                Score Over Time
+              </h2>
+              <p
+                style={{
+                  fontSize: "15px",
+                  color: "rgba(30, 58, 138, 0.6)",
+                  marginBottom: "20px",
+                }}
+              >
+                Date vs score by skill
+              </p>
+              {graphLoading && (
+                <div style={{ padding: "24px", textAlign: "center", color: "#1E3A8A" }}>
+                  Loading graph data...
+                </div>
+              )}
+              {graphError && (
+                <div style={{ padding: "16px", backgroundColor: "#FEE2E2", borderRadius: "8px", color: "#DC2626" }}>
+                  {graphError}
+                </div>
+              )}
+              {!graphLoading && !graphError && graphChartData.length > 0 && (
+                <div
+                  style={{
+                    minHeight: "480px",
+                    width: "100%",
+                    padding: "24px 20px",
+                    backgroundColor: "rgba(30, 58, 138, 0.02)",
+                    borderRadius: "12px",
+                    border: "1px solid rgba(30, 58, 138, 0.08)",
+                  }}
+                >
+                  <ChartContainer
+                    config={{
+                      speaking: { label: "Speaking", color: "#2563EB" },
+                      reading: { label: "Reading", color: "#059669" },
+                      writing: { label: "Writing", color: "#D97706" },
+                      listening: { label: "Listening", color: "#7C3AED" },
+                    }}
+                    style={{ height: "440px", width: "100%" }}
+                  >
+                  <LineChart
+                    data={graphChartData}
+                    margin={{ top: 28, right: 36, left: 56, bottom: 96 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(30, 58, 138, 0.12)" vertical={true} horizontal={true} />
+                    <XAxis
+                      dataKey="date"
+                      stroke="rgba(30, 58, 138, 0.7)"
+                      style={{ fontSize: "14px" }}
+                      angle={-40}
+                      textAnchor="end"
+                      height={88}
+                      tickMargin={14}
+                      tick={{ fill: "rgba(30, 58, 138, 0.85)", fontSize: 14 }}
+                    />
+                    <YAxis
+                      stroke="rgba(30, 58, 138, 0.7)"
+                      style={{ fontSize: "14px" }}
+                      domain={[0, 100]}
+                      width={48}
+                      tickMargin={10}
+                      tick={{ fill: "rgba(30, 58, 138, 0.85)", fontSize: 14 }}
+                      label={{
+                        value: "Score",
+                        angle: -90,
+                        position: "insideLeft",
+                        style: { fontSize: "14px", fill: "rgba(30, 58, 138, 0.85)" },
+                        offset: -10,
+                      }}
+                    />
+                    <ChartTooltip
+                      content={({ active, payload, label }) => {
+                        if (!active || !payload?.length) return null
+                        return (
+                          <div
+                            style={{
+                              padding: "12px 16px",
+                              backgroundColor: "#1E3A8A",
+                              color: "#FFFFFF",
+                              borderRadius: "8px",
+                              border: "1px solid rgba(255,255,255,0.2)",
+                              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                              minWidth: "140px",
+                              fontSize: "13px",
+                            }}
+                          >
+                            <div style={{ fontWeight: 600, marginBottom: "8px", color: "#E0E7FF" }}>
+                              {label}
+                            </div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                              {payload.map((entry: any) => (
+                                <div key={entry.dataKey} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
+                                  <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                    <span style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: entry.color, flexShrink: 0 }} />
+                                    <span style={{ color: "rgba(255,255,255,0.9)" }}>{entry.name}</span>
+                                  </span>
+                                  <span style={{ fontWeight: 600, color: "#FFFFFF" }}>{entry.value != null ? Number(entry.value) : "—"}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )
+                      }}
+                    />
+                    <Legend
+                      wrapperStyle={{ paddingTop: "20px" }}
+                      iconType="circle"
+                      iconSize={10}
+                      formatter={(value) => <span style={{ color: "rgba(30, 58, 138, 0.9)", fontSize: "14px" }}>{value}</span>}
+                    />
+                    <Line type="monotone" dataKey="speaking" name="Speaking" stroke="#2563EB" strokeWidth={3} dot={{ r: 5, strokeWidth: 2, fill: "#2563EB" }} activeDot={{ r: 7, strokeWidth: 2, fill: "#2563EB", stroke: "#fff" }} connectNulls />
+                    <Line type="monotone" dataKey="reading" name="Reading" stroke="#059669" strokeWidth={3} dot={{ r: 5, strokeWidth: 2, fill: "#059669" }} activeDot={{ r: 7, strokeWidth: 2, fill: "#059669", stroke: "#fff" }} connectNulls />
+                    <Line type="monotone" dataKey="writing" name="Writing" stroke="#D97706" strokeWidth={3} dot={{ r: 5, strokeWidth: 2, fill: "#D97706" }} activeDot={{ r: 7, strokeWidth: 2, fill: "#D97706", stroke: "#fff" }} connectNulls />
+                    <Line type="monotone" dataKey="listening" name="Listening" stroke="#7C3AED" strokeWidth={3} dot={{ r: 5, strokeWidth: 2, fill: "#7C3AED" }} activeDot={{ r: 7, strokeWidth: 2, fill: "#7C3AED", stroke: "#fff" }} connectNulls />
+                  </LineChart>
+                </ChartContainer>
+                </div>
+              )}
+              {!graphLoading && !graphError && graphChartData.length === 0 && (
+                <div style={{ padding: "24px", textAlign: "center", color: "rgba(30, 58, 138, 0.6)", fontSize: "14px" }}>
+                  No score data yet for this user.
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Loading State */}
           {isLoadingSkillData && (
