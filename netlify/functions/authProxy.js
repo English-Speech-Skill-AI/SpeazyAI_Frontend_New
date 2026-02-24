@@ -24,10 +24,26 @@ exports.handler = async (event) => {
     };
   }
 
+  const headers = {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Content-Type": "application/json",
+  };
+
   try {
-    const requestBody = event.body ? JSON.parse(event.body) : {};
-    
-    // Target API endpoint
+    let requestBody = {};
+    if (event.body && typeof event.body === "string" && event.body.trim()) {
+      try {
+        requestBody = JSON.parse(event.body);
+      } catch (parseErr) {
+        console.error("Auth proxy: invalid request body", parseErr.message);
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ success: false, message: "Invalid request body" }),
+        };
+      }
+    }
     const targetEndpoint = "https://api.exeleratetechnology.com/api/auth/login.php";
 
     const response = await fetch(targetEndpoint, {
@@ -38,24 +54,36 @@ exports.handler = async (event) => {
       body: JSON.stringify(requestBody),
     });
 
-    const data = await response.json();
+    const text = await response.text();
+    let data;
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch {
+      // Upstream returned non-JSON (e.g. HTML error page)
+      console.error("Auth proxy: upstream returned non-JSON", response.status, text?.slice(0, 200));
+      return {
+        statusCode: 502,
+        headers,
+        body: JSON.stringify({
+          success: false,
+          message: "Authentication service returned invalid response",
+        }),
+      };
+    }
 
     return {
       statusCode: response.status,
-      headers: {
-        "Access-Control-Allow-Origin": allowedOrigin,
-        "Access-Control-Allow-Headers": "Content-Type",
-      },
+      headers,
       body: JSON.stringify(data),
     };
   } catch (error) {
     console.error("Auth proxy error:", error);
     return {
       statusCode: 500,
-      headers: { "Access-Control-Allow-Origin": allowedOrigin },
-      body: JSON.stringify({ 
+      headers,
+      body: JSON.stringify({
         success: false,
-        message: error.message || "An error occurred during authentication"
+        message: error.message || "An error occurred during authentication",
       }),
     };
   }
