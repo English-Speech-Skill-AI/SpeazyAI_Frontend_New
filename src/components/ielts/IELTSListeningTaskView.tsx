@@ -64,7 +64,7 @@ export function IELTSListeningTaskView() {
 
         // First, get the item from the list to get json_url
         const listResponse = await fetch(
-          'https://api.exeleratetechnology.com/api/ielts/listening/content/list.php',
+          'https://api.intelliviq.com/api/ielts/listening/content/list.php',
           {
             method: 'GET',
             headers: {
@@ -346,7 +346,7 @@ export function IELTSListeningTaskView() {
         const saveWithToken = async (authToken: string | null) => {
           if (!authToken) return null;
           
-          return await fetch('https://api.exeleratetechnology.com/api/ielts/listening/results/save-result.php', {
+          return await fetch('https://api.intelliviq.com/api/ielts/listening/results/save-result.php', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -481,7 +481,7 @@ export function IELTSListeningTaskView() {
           const saveWithToken = async (authToken: string | null) => {
             if (!authToken) return null;
             
-            return await fetch('https://api.exeleratetechnology.com/api/ielts/listening/results/save-result.php', {
+            return await fetch('https://api.intelliviq.com/api/ielts/listening/results/save-result.php', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',

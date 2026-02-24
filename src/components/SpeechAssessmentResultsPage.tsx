@@ -194,7 +194,7 @@ export function SpeechAssessmentResultsPage() {
         console.log("[Save Result] payload.result.reading:", payload.result?.reading)
         console.log("[Save Result] payload.metadata:", payload.metadata)
 
-        const response = await fetch("https://api.exeleratetechnology.com/api/speaking/save-result.php", {
+        const response = await fetch("https://api.intelliviq.com/api/speaking/save-result.php", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

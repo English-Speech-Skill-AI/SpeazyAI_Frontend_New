@@ -65,7 +65,7 @@ export function IELTSWritingTaskView() {
 
         // First, get the content item to find json_url
         const listResponse = await fetch(
-          'https://api.exeleratetechnology.com/api/ielts/writing/content/list.php',
+          'https://api.intelliviq.com/api/ielts/writing/content/list.php',
           {
             method: 'GET',
             headers: {
@@ -235,7 +235,7 @@ export function IELTSWritingTaskView() {
     try {
       const totalTimeSeconds = Math.floor((Date.now() - startTime) / 1000);
       
-      const response = await fetch('https://api.exeleratetechnology.com/api/ielts/writing/results/save-result.php', {
+      const response = await fetch('https://api.intelliviq.com/api/ielts/writing/results/save-result.php', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

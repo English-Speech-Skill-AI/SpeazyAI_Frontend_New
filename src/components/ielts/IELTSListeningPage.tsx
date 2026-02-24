@@ -42,7 +42,7 @@ export function IELTSListeningPage() {
         setError(null);
 
         const response = await fetch(
-          'https://api.exeleratetechnology.com/api/ielts/listening/content/list.php',
+          'https://api.intelliviq.com/api/ielts/listening/content/list.php',
           {
             method: 'GET',
             headers: {

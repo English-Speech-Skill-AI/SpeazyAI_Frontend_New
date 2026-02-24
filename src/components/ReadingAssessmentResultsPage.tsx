@@ -173,7 +173,7 @@ export function ReadingAssessmentResultsPage() {
         console.log("Saving result to database with payload:", JSON.stringify(payload, null, 2))
 
         // Use the reading API endpoint as specified by the user
-        const response = await fetch("https://api.exeleratetechnology.com/api/reading/save-result.php", {
+        const response = await fetch("https://api.intelliviq.com/api/reading/save-result.php", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

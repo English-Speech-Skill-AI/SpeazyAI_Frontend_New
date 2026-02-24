@@ -129,7 +129,7 @@ export function IELTSSpeakingTaskView() {
           const fetchWithToken = async (authToken: string | null) => {
             if (!authToken) return null;
             return await fetch(
-              `https://api.exeleratetechnology.com/api/ielts/speaking/content/get.php?content_id=${contentId}`,
+              `https://api.intelliviq.com/api/ielts/speaking/content/get.php?content_id=${contentId}`,
               {
                 method: 'GET',
                 headers: {
@@ -1289,7 +1289,7 @@ Be STRICT, ACCURATE, and HONEST. Do NOT inflate scores. Use official IELTS band 
         let currentToken = token;
         const saveAllParts = async (authToken: string): Promise<any> => {
           const response = await fetch(
-            'https://api.exeleratetechnology.com/api/ielts/speaking/save-result.php',
+            'https://api.intelliviq.com/api/ielts/speaking/save-result.php',
             {
               method: 'POST',
               headers: {
@@ -1306,7 +1306,7 @@ Be STRICT, ACCURATE, and HONEST. Do NOT inflate scores. Use official IELTS band 
             if (newToken) {
               // Retry once with new token
               const retryResponse = await fetch(
-                'https://api.exeleratetechnology.com/api/ielts/speaking/save-result.php',
+                'https://api.intelliviq.com/api/ielts/speaking/save-result.php',
                 {
                   method: 'POST',
                   headers: {
@@ -1609,7 +1609,7 @@ Be STRICT, ACCURATE, and HONEST. Do NOT inflate scores. Use official IELTS band 
               let currentToken = token;
               const saveZeroResults = async (authToken: string) => {
                 const response = await fetch(
-                  'https://api.exeleratetechnology.com/api/ielts/speaking/save-result.php',
+                  'https://api.intelliviq.com/api/ielts/speaking/save-result.php',
                   {
                     method: 'POST',
                     headers: {

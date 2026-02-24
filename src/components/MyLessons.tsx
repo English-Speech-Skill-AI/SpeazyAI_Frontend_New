@@ -150,7 +150,7 @@ export function MyLessons() {
 
       try {
         setIsLoadingContent(true)
-        const response = await fetch("https://api.exeleratetechnology.com/api/content/list.php", {
+        const response = await fetch("https://api.intelliviq.com/api/content/list.php", {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -194,7 +194,7 @@ export function MyLessons() {
         toast.error("Invalid lesson id.")
         return
       }
-      const response = await fetch("https://api.exeleratetechnology.com/api/content/delete.php", {
+      const response = await fetch("https://api.intelliviq.com/api/content/delete.php", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

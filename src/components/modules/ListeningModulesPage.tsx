@@ -10,8 +10,8 @@ import { useState, useEffect, useRef } from "react"
 import { useAuth } from "../../contexts/AuthContext"
 import { API_URLS } from '@/config/apiConfig';
 
-const API_URL = "https://api.exeleratetechnology.com/api/content/list_bundle.php?section=listening"
-const SAVE_RESULT_API = "https://api.exeleratetechnology.com/api/listening/save-result.php"
+const API_URL = "https://api.intelliviq.com/api/content/list_bundle.php?section=listening"
+const SAVE_RESULT_API = "https://api.intelliviq.com/api/listening/save-result.php"
 
 type PracticeLevel = "BEGINNER" | "INTERMEDIATE" | "ADVANCED" | null
 

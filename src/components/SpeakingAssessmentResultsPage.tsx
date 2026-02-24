@@ -197,7 +197,7 @@ export function SpeakingAssessmentResultsPage() {
         console.log("Saving result to database with payload:", JSON.stringify(payload, null, 2))
 
         // Use the speaking API endpoint as specified by the user
-        const response = await fetch("https://api.exeleratetechnology.com/api/speaking/save-result.php", {
+        const response = await fetch("https://api.intelliviq.com/api/speaking/save-result.php", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

@@ -190,7 +190,7 @@ export function CustomContent({ onBack }: CustomContentProps) {
       try {
         setIsLoadingContent(true)
         // Use the custom PDF list API endpoint
-        const response = await fetch("https://api.exeleratetechnology.com/api/speaking/custom-pdf/list.php", {
+        const response = await fetch("https://api.intelliviq.com/api/speaking/custom-pdf/list.php", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -341,7 +341,7 @@ export function CustomContent({ onBack }: CustomContentProps) {
       // Add folder path for Custom-Content (pdfs/Custom-Content in DigitalOcean Spaces)
       formData.append("folder", "pdfs/Custom-Content")
 
-      const uploadResponse = await fetch("https://api.exeleratetechnology.com/upload-pdf", {
+      const uploadResponse = await fetch("https://api.intelliviq.com/upload-pdf", {
         method: "POST",
         body: formData,
       })
@@ -359,7 +359,7 @@ export function CustomContent({ onBack }: CustomContentProps) {
       }
 
       // Use the custom PDF save endpoint
-      const saveMetadataResponse = await fetch("https://api.exeleratetechnology.com/api/speaking/custom-pdf/save.php", {
+      const saveMetadataResponse = await fetch("https://api.intelliviq.com/api/speaking/custom-pdf/save.php", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -410,7 +410,7 @@ export function CustomContent({ onBack }: CustomContentProps) {
         if (!token) return
         
         try {
-          const response = await fetch("https://api.exeleratetechnology.com/api/speaking/custom-pdf/list.php", {
+          const response = await fetch("https://api.intelliviq.com/api/speaking/custom-pdf/list.php", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -556,7 +556,7 @@ export function CustomContent({ onBack }: CustomContentProps) {
         return
       }
 
-      const response = await fetch("https://api.exeleratetechnology.com/api/speaking/custom-pdf/delete.php", {
+      const response = await fetch("https://api.intelliviq.com/api/speaking/custom-pdf/delete.php", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

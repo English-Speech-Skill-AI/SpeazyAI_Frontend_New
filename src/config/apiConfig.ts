@@ -87,8 +87,7 @@ export const API_CONFIG = {
   urls: API_URLS,
 };
 
-// Base URL for direct Exelerate API calls (org, users, reading, ielts, etc.).
-// Always use the full API host, same as: curl --location 'https://api.exeleratetechnology.com/api/...' --header 'Authorization: Bearer <token>'
+// Base URL for direct API calls (org, users, reading, ielts, etc.).
 export const getExelerateApiBase = (): string => {
-  return 'https://api.exeleratetechnology.com';
+  return 'https://api.intelliviq.com';
 };

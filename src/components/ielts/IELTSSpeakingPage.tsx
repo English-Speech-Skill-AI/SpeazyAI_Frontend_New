@@ -43,7 +43,7 @@ export function IELTSSpeakingPage() {
         setError(null);
 
         const response = await fetch(
-          'https://api.exeleratetechnology.com/api/ielts/speaking/content/list.php',
+          'https://api.intelliviq.com/api/ielts/speaking/content/list.php',
           {
             method: 'POST',
             headers: {

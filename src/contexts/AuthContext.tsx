@@ -51,7 +51,7 @@ interface AuthProviderProps {
 }
 
 // API base URL for analytics endpoints
-const API_BASE_URL = 'https://api.exeleratetechnology.com/api';
+const API_BASE_URL = 'https://api.intelliviq.com/api';
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [authData, setAuthData] = useState<AuthData | null>(null);

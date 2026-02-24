@@ -82,7 +82,7 @@ export function IELTSReadingPage() {
         setError(null);
 
         const response = await fetch(
-          'https://api.exeleratetechnology.com/api/ielts/reading/content/list.php',
+          'https://api.intelliviq.com/api/ielts/reading/content/list.php',
           {
             method: 'GET',
             headers: {
@@ -237,7 +237,7 @@ export function IELTSReadingPage() {
         console.log('Saving result with data:', requestBody);
 
         const response = await fetch(
-          'https://api.exeleratetechnology.com/api/ielts/reading/save-result.php',
+          'https://api.intelliviq.com/api/ielts/reading/save-result.php',
           {
             method: 'POST',
             headers: {

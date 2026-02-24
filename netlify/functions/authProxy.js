@@ -77,7 +77,7 @@ exports.handler = async (event) => {
       }
     }
 
-    const targetEndpoint = 'https://api.exeleratetechnology.com/api/auth/login.php';
+    const targetEndpoint = 'https://api.intelliviq.com/api/auth/login.php';
     const bodyStr = JSON.stringify(requestBody);
 
     const res = await httpsRequest(targetEndpoint, {

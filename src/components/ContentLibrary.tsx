@@ -168,7 +168,7 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
 
             try {
                 setIsLoadingContent(true);
-                const response = await fetch("https://api.exeleratetechnology.com/api/content/list.php", {
+                const response = await fetch("https://api.intelliviq.com/api/content/list.php", {
                     method: "GET",
                     headers: {
                         "Content-Type": "application/json",
@@ -339,7 +339,7 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
             const formData = new FormData();
             formData.append("file", selectedFile);
 
-            const uploadResponse = await fetch("https://api.exeleratetechnology.com/upload-pdf", {
+            const uploadResponse = await fetch("https://api.intelliviq.com/upload-pdf", {
                 method: "POST",
                 body: formData,
             });
@@ -357,7 +357,7 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
                 throw new Error("Authentication token not available. Please log in again.");
             }
 
-            const saveMetadataResponse = await fetch("https://api.exeleratetechnology.com/api/content/create.php", {
+            const saveMetadataResponse = await fetch("https://api.intelliviq.com/api/content/create.php", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -409,7 +409,7 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
                 if (!token) return;
                 
                 try {
-                    const response = await fetch("https://api.exeleratetechnology.com/api/content/list.php", {
+                    const response = await fetch("https://api.intelliviq.com/api/content/list.php", {
                         method: "GET",
                         headers: {
                             "Content-Type": "application/json",

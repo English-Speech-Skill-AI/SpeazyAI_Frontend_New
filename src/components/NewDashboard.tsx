@@ -135,7 +135,7 @@ export function NewDashboard() {
       }
       try {
         setLoadingSpeakingTime(true)
-        const res = await fetch("https://api.exeleratetechnology.com/api/speaking/total_speaking_time.php", {
+        const res = await fetch("https://api.intelliviq.com/api/speaking/total_speaking_time.php", {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${token}`,

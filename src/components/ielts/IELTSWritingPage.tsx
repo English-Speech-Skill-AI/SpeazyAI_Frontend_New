@@ -47,7 +47,7 @@ export function IELTSWritingPage() {
         setError(null);
 
         const response = await fetch(
-          'https://api.exeleratetechnology.com/api/ielts/writing/content/list.php',
+          'https://api.intelliviq.com/api/ielts/writing/content/list.php',
           {
             method: 'GET',
             headers: {
