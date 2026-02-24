@@ -1,9 +1,9 @@
-// API Configuration for DigitalOcean Functions
-// Update these URLs after deploying your functions to DigitalOcean
+// API Configuration - supports DigitalOcean Functions, Netlify Functions, and local dev
 
 const isLocal = import.meta.env.DEV || window.location.hostname === 'localhost';
+const isNetlify = typeof window !== 'undefined' && window.location.hostname.includes('netlify.app');
 
-// DigitalOcean Function URLs
+// DigitalOcean Function URLs (used when deployed to DigitalOcean App Platform)
 const DO_BASE = 'https://faas-blr1-8177d592.doserverless.co/api/v1/web/fn-a38d3580-f602-4111-8967-d449fc5ef00e/default';
 const DIGITALOCEAN_FUNCTIONS = {
   speechProxy: import.meta.env.VITE_SPEECH_PROXY_URL || `${DO_BASE}/speechProxy`,
@@ -11,7 +11,7 @@ const DIGITALOCEAN_FUNCTIONS = {
   authProxy: import.meta.env.VITE_AUTH_PROXY_URL || `${DO_BASE}/authProxy`,
   pdfProxy: import.meta.env.VITE_PDF_PROXY_URL || `${DO_BASE}/pdfProxy`,
   pdfExtractProxy: import.meta.env.VITE_PDF_EXTRACT_PROXY_URL || `${DO_BASE}/pdfExtractProxy`,
-  supportProxy: import.meta.env.VITE_SUPPORT_PROXY_URL || `${DO_BASE}/supportProxyServer`,
+  supportProxy: import.meta.env.VITE_SUPPORT_PROXY_URL || `${DO_BASE}/supportProxy`,
 };
 
 // Local development proxy URLs (if running proxy servers locally)
@@ -24,7 +24,7 @@ const LOCAL_PROXIES = {
   supportProxy: 'http://localhost:4002/supportProxy',
 };
 
-// Netlify function URLs (legacy - remove after migration)
+// Netlify function URLs (used when deployed to speazyai.netlify.app)
 const NETLIFY_FUNCTIONS = {
   speechProxy: '/.netlify/functions/speechProxy',
   chatgptProxy: '/.netlify/functions/chatgptProxy',
@@ -35,9 +35,11 @@ const NETLIFY_FUNCTIONS = {
 };
 
 // Choose which API provider to use
-// Set to 'digitalocean', 'local', or 'netlify'
-// Defaults to 'local' when running on localhost, 'digitalocean' otherwise
-const API_PROVIDER = (import.meta.env.VITE_API_PROVIDER || (isLocal ? 'local' : 'digitalocean')) as 'digitalocean' | 'local' | 'netlify';
+// Set via VITE_API_PROVIDER, or auto-detect:
+// - localhost -> 'local'
+// - *.netlify.app (e.g. speazyai.netlify.app) -> 'netlify'
+// - otherwise -> 'digitalocean'
+const API_PROVIDER = (import.meta.env.VITE_API_PROVIDER || (isLocal ? 'local' : (isNetlify ? 'netlify' : 'digitalocean'))) as 'digitalocean' | 'local' | 'netlify';
 
 // Get the appropriate URL based on provider and environment
 function getApiUrl(functionName: keyof typeof DIGITALOCEAN_FUNCTIONS): string {

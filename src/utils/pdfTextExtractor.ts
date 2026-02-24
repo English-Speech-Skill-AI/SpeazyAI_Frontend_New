@@ -139,7 +139,7 @@ const extractTextFromPdf = async (pdfUrl: string): Promise<string> => {
         
         const proxyUrl = isLocal
           ? `/api/pdf-proxy?url=${encodeURIComponent(pdfUrl)}` // Local proxy (if you create one)
-          : `${API_URLS.pdfProxy}?url=${encodeURIComponent(pdfUrl)}` // DigitalOcean function
+          : `${API_URLS.pdfProxy}?url=${encodeURIComponent(pdfUrl)}` // Netlify or DigitalOcean function
         
         const proxyResponse = await fetch(proxyUrl)
         
@@ -212,7 +212,7 @@ const processTextWithChatGPT = async (
 
     const apiUrl = isLocal
       ? 'http://localhost:4001/pdfExtractProxy' // Local proxy (port 4001 for chatgptProxy)
-      : API_URLS.pdfExtractProxy // DigitalOcean function for PDF extraction
+      : API_URLS.pdfExtractProxy // Netlify or DigitalOcean function for PDF extraction
 
     // Truncate text if too long (ChatGPT has token limits)
     const maxLength = 100000 // Approximate character limit

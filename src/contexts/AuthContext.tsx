@@ -317,7 +317,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       const apiUrl = isLocal
         ? '/api/auth/login.php' // Vite proxy in development
-        : API_URLS.authProxy // DigitalOcean function in production
+        : API_URLS.authProxy // Netlify or DigitalOcean function in production
       
       const response = await fetch(apiUrl, {
         method: 'POST',
