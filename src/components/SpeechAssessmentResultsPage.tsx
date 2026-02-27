@@ -1,6 +1,7 @@
 "use client"
 
 import { useNavigate, useLocation } from "react-router-dom"
+import { useTranslation } from "react-i18next"
 import { Button } from "./ui/button"
 import { ArrowLeft } from "lucide-react"
 import { SpeechAssessmentResults } from "./SpeechAssessmentResults"
@@ -12,6 +13,7 @@ import { useEffect, useRef } from "react"
 export function SpeechAssessmentResultsPage() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { t } = useTranslation()
   const { token, authData } = useAuth()
   const hasSavedRef = useRef(false)
   
@@ -289,7 +291,7 @@ export function SpeechAssessmentResultsPage() {
               marginRight: "8px",
             }}
           />
-          Back
+          {t("speechResults.back")}
         </Button>
 
         {/* Speech Assessment Results */}

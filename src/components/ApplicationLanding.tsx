@@ -157,7 +157,7 @@ export function ApplicationLanding({
             className="text-4xl md:text-5xl font-bold"
             style={{ color: "#F2F6FF" }}
           >
-            Welcome to Speech Skills AI
+            Welcome to English Skill AI
           </h2>
           <p
             className="text-xl"

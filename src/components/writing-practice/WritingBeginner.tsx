@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "../ui/button";
 import { ArrowLeft, Star, Sparkles, User, Users, Clock, UtensilsCrossed, MapPin, Heart } from "lucide-react";
 import { WritingPracticeQuestion } from "./WritingPracticeQuestion";
+import { useTranslation } from "react-i18next";
 
 interface WritingBeginnerProps {
   onBack: () => void;
@@ -84,6 +85,7 @@ const beginnerTiles: BeginnerTile[] = [
 ];
 
 export function WritingBeginner({ onBack }: WritingBeginnerProps) {
+  const { t } = useTranslation();
   const [currentView, setCurrentView] = useState<BeginnerView>("topics");
   const [selectedTile, setSelectedTile] = useState<BeginnerTile | null>(null);
 
@@ -126,9 +128,9 @@ export function WritingBeginner({ onBack }: WritingBeginnerProps) {
               className="text-white hover:bg-white/10 hover:text-yellow-300"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Levels
+              {t("writingPractice.backToLevels")}
             </Button>
-            <h1 className="text-xl text-white font-bold">Beginner Writing</h1>
+            <h1 className="text-xl text-white font-bold">{t("writingPractice.beginnerWriting")}</h1>
             <div className="w-32" />
           </div>
         </div>
@@ -138,10 +140,10 @@ export function WritingBeginner({ onBack }: WritingBeginnerProps) {
         {/* Heading */}
         <div className="text-center mb-14">
           <h2 className="text-5xl font-extrabold text-white drop-shadow-md mb-4">
-            Let's Write Together!
+            {t("writingPractice.letsWriteTogether")}
           </h2>
           <p className="text-xl text-white/80">
-            Choose a fun writing topic to get started
+            {t("writingPractice.chooseTopic")}
           </p>
         </div>
 
@@ -189,7 +191,7 @@ export function WritingBeginner({ onBack }: WritingBeginnerProps) {
         <div className="mt-20 text-center">
           <div className="inline-flex items-center gap-3 bg-white/10 px-8 py-4 rounded-full border border-white/30 backdrop-blur-sm">
             <Star className="w-6 h-6 text-[#FFD600] animate-spin" />
-            <span className="text-lg text-white font-semibold">You're going to do great!</span>
+            <span className="text-lg text-white font-semibold">{t("writingPractice.youreGoingToDoGreat")}</span>
             <Sparkles className="w-6 h-6 text-white animate-pulse" />
           </div>
         </div>

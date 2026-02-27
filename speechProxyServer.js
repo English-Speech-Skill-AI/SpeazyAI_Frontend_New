@@ -13,14 +13,33 @@ app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
 app.post("/speechProxy", async (req, res) => {
   try {
-    // Get endpoint from query parameter, default to unscripted
-    const targetEndpoint = req.query.endpoint || "https://apis.languageconfidence.ai/speech-assessment/unscripted/uk";
-    const isScripted = typeof targetEndpoint === "string" && targetEndpoint.includes("speech-assessment/scripted");
-
     // Build API body: strip endpoint; keep expected_text for scripted (scripted/uk expects "expected_text", not "reference_text")
     const { endpoint: _e, expected_text: expectedText, script, ...rest } = req.body;
     let apiBody = { ...rest };
     delete apiBody.script;
+
+    // Get base endpoint: query param wins, then body endpoint, then default to unscripted
+    let targetEndpoint =
+      req.query.endpoint ||
+      _e ||
+      "https://apis.languageconfidence.ai/speech-assessment/unscripted/uk";
+
+    let isScripted =
+      typeof targetEndpoint === "string" &&
+      targetEndpoint.includes("speech-assessment/scripted");
+
+    // Rule: only switch from scripted -> unscripted when expected_text is > 300 chars
+    if (isScripted && expectedText != null) {
+      const textForLength = String(expectedText).trim();
+      if (textForLength.length > 300) {
+        // Change to the matching unscripted endpoint, but ONLY in this case
+        targetEndpoint = targetEndpoint.replace(
+          "/scripted/",
+          "/unscripted/"
+        );
+        isScripted = false;
+      }
+    }
 
     // Scripted: use the field name the API accepts (LC scripted/uk = "expected_text"; set LC_SCRIPT_FIELD to override)
     const scriptedTextField = process.env.LC_SCRIPT_FIELD || "expected_text";

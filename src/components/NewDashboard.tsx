@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react"
 import type { CSSProperties } from "react"
-import { useNavigate } from "react-router-dom"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { MelloAssistant } from "./MelloAssistant"
@@ -23,9 +22,12 @@ import {
   Award,
   Clock,
 } from "lucide-react"
+import { useTranslation } from "react-i18next"
+import { useLocalizedNavigate } from "./LocaleLayout"
 
 export function NewDashboard() {
-  const navigate = useNavigate()
+  const { t } = useTranslation()
+  const navigate = useLocalizedNavigate()
   const [isLoaded, setIsLoaded] = useState(false)
   const [showMelloMessage, setShowMelloMessage] = useState(false)
   const [supportChatbotOpen, setSupportChatbotOpen] = useState(false)
@@ -168,59 +170,16 @@ export function NewDashboard() {
 
   // Main learning modules (6 tiles in order: Speaking, Writing, Reading, Listening, IELTS, AI Tutor)
   const modules = [
-    {
-      id: "speaking",
-      title: "Speaking",
-      description: "Practice speaking with confidence",
-      icon: Mic2,
-      color: "#3B82F6",
-      progress: 60,
-    },
-    {
-      id: "writing",
-      title: "Writing",
-      description: "Improve your writing skills",
-      icon: PenTool,
-      color: "#00B9FC",
-      progress: 45,
-    },
-    {
-      id: "reading",
-      title: "Reading",
-      description: "Enhance reading comprehension",
-      icon: BookOpen,
-      color: "#246BCF",
-      progress: 75,
-    },
-    {
-      id: "listening-practice",
-      title: "Listening",
-      description: "Develop listening skills",
-      icon: Headphones,
-      color: "#1E3A8A",
-      progress: 30,
-    },
-    {
-      id: "ielts",
-      title: "IELTS Preparation",
-      description: "Complete IELTS test preparation",
-      icon: Award,
-      color: "#00B9FC",
-      progress: 0,
-    },
-    {
-      id: "chat",
-      title: "AI Tutor",
-      description: "Get personalized coaching",
-      icon: MessageCircle,
-      color: "#3B82F6",
-      progress: 0,
-    },
+    { id: "speaking", titleKey: "dashboard.speaking", descKey: "dashboard.speakingDesc", icon: Mic2, color: "#3B82F6", progress: 60 },
+    { id: "writing", titleKey: "dashboard.writing", descKey: "dashboard.writingDesc", icon: PenTool, color: "#00B9FC", progress: 45 },
+    { id: "reading", titleKey: "dashboard.reading", descKey: "dashboard.readingDesc", icon: BookOpen, color: "#246BCF", progress: 75 },
+    { id: "listening-practice", titleKey: "dashboard.listening", descKey: "dashboard.listeningDesc", icon: Headphones, color: "#1E3A8A", progress: 30 },
+    { id: "ielts", titleKey: "dashboard.ieltsPreparation", descKey: "dashboard.ieltsDesc", icon: Award, color: "#00B9FC", progress: 0 },
+    { id: "chat", titleKey: "dashboard.aiTutor", descKey: "dashboard.aiTutorDesc", icon: MessageCircle, color: "#3B82F6", progress: 0 },
   ]
 
 
   const handleModuleClick = (moduleId: string) => {
-    // Handle navigation based on module ID
     const navigationMap: Record<string, string> = {
       "reading": "/reading-modules",
       "speaking": "/speaking-modules",
@@ -230,46 +189,17 @@ export function NewDashboard() {
       "chat": "/chat",
       "connect-teacher": "/connect-teacher",
     }
-    
     const route = navigationMap[moduleId]
-    if (route) {
-      navigate(route)
-    }
+    if (route) navigate(route)
   }
 
 
   // Stats cards from old dashboard
   const stats = [
-    {
-      label: "Speaking Time",
-      value: loadingSpeakingTime ? "..." : speakingTimeDisplay,
-      icon: Mic2,
-      color: "#3B82F6",
-    },
-    {
-      label: "App Usage Time",
-      value: loadingUsageTime 
-        ? "..." 
-        : usageTimeSeconds !== null 
-          ? formatUsageTime(usageTimeSeconds)
-          : "0m",
-      icon: Clock,
-      color: "#00B9FC",
-    },
-    {
-      label: "Streak Days",
-      value: loadingStreak ? "..." : streakDays.toString(),
-      icon: Star,
-      color: "#FFD600",
-    },
-    {
-      label: "Improvement",
-      value: loadingImprovement 
-        ? "..." 
-        : improvementDisplay,
-      icon: TrendingUp,
-      color: "#246BCF",
-    },
+    { labelKey: "dashboard.speakingTime", value: loadingSpeakingTime ? "..." : speakingTimeDisplay, icon: Mic2, color: "#3B82F6" },
+    { labelKey: "dashboard.appUsageTime", value: loadingUsageTime ? "..." : (usageTimeSeconds !== null ? formatUsageTime(usageTimeSeconds) : "0m"), icon: Clock, color: "#00B9FC" },
+    { labelKey: "dashboard.streakDays", value: loadingStreak ? "..." : streakDays.toString(), icon: Star, color: "#FFD600" },
+    { labelKey: "dashboard.improvement", value: loadingImprovement ? "..." : improvementDisplay, icon: TrendingUp, color: "#246BCF" },
   ]
 
   const renderMainDashboard = () => (
@@ -284,7 +214,7 @@ export function NewDashboard() {
             marginBottom: "8px",
           }}
         >
-          Welcome back, {authData?.user?.first_name || "User"}! 👋
+          {t("dashboard.welcomeBack", { name: authData?.user?.first_name || t("dashboard.user") })}
         </h2>
         <p
           style={{
@@ -292,7 +222,7 @@ export function NewDashboard() {
             color: "rgba(255, 255, 255, 0.8)",
           }}
         >
-          Ready to practice your speaking skills today?
+          {t("dashboard.readyToPractice")}
         </p>
       </div>
 
@@ -381,7 +311,7 @@ export function NewDashboard() {
                   color: "rgba(30, 58, 138, 0.7)",
                 }}
               >
-                {stat.label}
+                {t(stat.labelKey)}
               </p>
             </div>
           </div>
@@ -398,7 +328,7 @@ export function NewDashboard() {
             marginBottom: "24px",
           }}
         >
-          Your Learning Modules
+          {t("dashboard.yourLearningModules")}
         </h3>
       </div>
 
@@ -463,7 +393,7 @@ export function NewDashboard() {
                   marginBottom: "8px",
                 }}
               >
-                {module.title}
+                {t(module.titleKey)}
               </h3>
               <p
                 style={{
@@ -471,7 +401,7 @@ export function NewDashboard() {
                   color: "rgba(30, 58, 138, 0.7)",
                 }}
               >
-                {module.description}
+                {t(module.descKey)}
               </p>
             </div>
           </div>
@@ -512,12 +442,15 @@ export function NewDashboard() {
       {/* Header */}
       <PageHeader />
 
-      {/* Main Content */}
+      {/* Main Content - scrollbar hidden */}
       <div
         style={{
           flex: 1,
           overflowY: "auto",
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
         }}
+        className="[&::-webkit-scrollbar]:hidden"
       >
         <div
           data-mello-scroll
@@ -534,7 +467,7 @@ export function NewDashboard() {
 
       <MelloAssistant
         state="waving"
-        message={`Hi! Welcome back, ${authData?.user?.first_name || "User"}! ${streakDays > 0 ? `You're on a ${streakDays}-day streak! Keep it up! 👋🎉` : "Ready to start your learning journey? 👋"}`}
+        message={streakDays > 0 ? t("dashboard.melloWelcome", { name: authData?.user?.first_name || t("dashboard.user") }) + " " + t("dashboard.melloStreak", { count: streakDays }) : t("dashboard.melloWelcome", { name: authData?.user?.first_name || t("dashboard.user") }) + " " + t("dashboard.melloReady")}
         showMessage={showMelloMessage}
         onMessageDismiss={() => setShowMelloMessage(false)}
         onClick={() => setShowMelloMessage((prev) => !prev)}

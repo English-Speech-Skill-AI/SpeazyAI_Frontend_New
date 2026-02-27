@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { useAuth } from '../../contexts/AuthContext';
 import { ArrowLeft, PenTool, Loader2, AlertCircle, Sparkles, LogOut, FileText } from 'lucide-react';
+import { useLocalizedNavigate } from '../LocaleLayout';
 
 interface WritingItem {
   id: number;
@@ -37,7 +38,7 @@ export function IELTSWritingPage() {
   useEffect(() => {
     const fetchWritingItems = async () => {
       if (!token) {
-        setError('Authentication required. Please log in.');
+        setError(t('modules.ielts.authRequired'));
         setLoading(false);
         return;
       }
@@ -72,7 +73,7 @@ export function IELTSWritingPage() {
         }
       } catch (err: any) {
         console.error('Error fetching writing content:', err);
-        setError(err.message || 'Failed to load writing content. Please try again.');
+        setError(err.message || t('modules.ielts.loadFailed'));
         setItems([]);
       } finally {
         setLoading(false);
@@ -80,7 +81,7 @@ export function IELTSWritingPage() {
     };
 
     fetchWritingItems();
-  }, [token]);
+  }, [token, t]);
 
   const handleTileClick = (item: WritingItem) => {
     // Always start with Task 1 when clicking a tile
@@ -161,7 +162,7 @@ export function IELTSWritingPage() {
               }}
             >
               <ArrowLeft style={{ width: '16px', height: '16px', marginRight: '8px', display: 'inline-block' }} />
-              IELTS Menu
+              {t('modules.ielts.backToIelts')}
             </Button>
             
             <h1 style={{
@@ -171,7 +172,7 @@ export function IELTSWritingPage() {
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
             }}>
-              IELTS Writing
+              {t('modules.ielts.writing')}
             </h1>
 
             <Button
@@ -222,7 +223,7 @@ export function IELTSWritingPage() {
                 marginBottom: '24px',
               }} />
               <p style={{ color: '#d1d5db', fontSize: '18px' }}>
-                Loading writing content...
+                {t('modules.ielts.loadingWriting')}
               </p>
             </div>
           ) : error ? (
@@ -240,7 +241,7 @@ export function IELTSWritingPage() {
                   color: '#ffffff',
                   marginBottom: '12px',
                 }}>
-                  Error Loading Content
+                  {t('modules.ielts.errorLoadingContent')}
                 </h3>
                 <p style={{ color: '#9ca3af', marginBottom: '32px', fontSize: '18px' }}>
                   {error}
@@ -258,7 +259,7 @@ export function IELTSWritingPage() {
                     fontWeight: '600',
                   }}
                 >
-                  Try Again
+                  {t('modules.ielts.tryAgain')}
                 </button>
               </CardContent>
             </Card>

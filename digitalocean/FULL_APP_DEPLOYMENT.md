@@ -39,7 +39,7 @@ Your app consists of:
 
 2. **Connect Your Repository**:
    - Choose your Git provider (GitHub/GitLab/Bitbucket)
-   - Select your repository: `SppechSkillsAi`
+   - Select your repository: `EnglishSkillAI`
    - Select branch: `master` (or `main`)
 
 3. **Configure Build Settings**:
@@ -100,7 +100,7 @@ Since this is a React SPA, you need to handle client-side routing:
    static_sites:
      - name: frontend
        github:
-         repo: your-username/SppechSkillsAi
+         repo: your-username/EnglishSkillAI
          branch: master
        build_command: npm run build
        output_dir: build

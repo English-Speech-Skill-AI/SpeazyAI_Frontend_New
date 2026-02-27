@@ -1,6 +1,7 @@
 "use client"
 
-import { useNavigate, useLocation } from "react-router-dom"
+import { useLocation } from "react-router-dom"
+import { useLocalizedNavigate } from "./LocaleLayout"
 import { Button } from "./ui/button"
 import { ArrowLeft } from "lucide-react"
 import { SpeakingAssessmentResults } from "./SpeakingAssessmentResults"
@@ -10,7 +11,7 @@ import { useAuth } from "../contexts/AuthContext"
 import { useEffect, useRef } from "react"
 
 export function SpeakingAssessmentResultsPage() {
-  const navigate = useNavigate()
+  const navigate = useLocalizedNavigate()
   const location = useLocation()
   const { token, authData } = useAuth()
   const hasSavedRef = useRef(false)

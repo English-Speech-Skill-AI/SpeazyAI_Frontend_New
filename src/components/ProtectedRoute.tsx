@@ -1,6 +1,7 @@
 import React from "react"
-import { Navigate, useLocation } from "react-router-dom"
+import { useLocation } from "react-router-dom"
 import { useAuth } from "../contexts/AuthContext"
+import { LocalizedNavigate } from "./LocaleLayout"
 
 interface ProtectedRouteProps {
   children: React.ReactElement
@@ -36,7 +37,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   // Redirect to login if not authenticated; pass current path so login can redirect back after success
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace state={{ from: location }} />
+    return <LocalizedNavigate to="/login" replace state={{ from: location }} />
   }
 
   // Render the protected component

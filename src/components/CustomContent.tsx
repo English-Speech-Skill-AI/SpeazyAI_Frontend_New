@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, CSSProperties } from "react"
+import { getUploadPdfUrl } from "@/config/apiConfig"
 import {
   Card,
   CardContent,
@@ -47,7 +48,8 @@ import {
 } from "lucide-react"
 import { ScrollArea } from "./ui/scroll-area"
 import { AudioRecorder } from "./audioRecorder"
-import { useNavigate, useLocation } from "react-router-dom"
+import { useLocation } from "react-router-dom"
+import { useLocalizedNavigate } from "./LocaleLayout"
 import { useAuth } from "../contexts/AuthContext"
 import { toast } from "sonner"
 import { PdfLoadingScreen } from "./PdfLoadingScreen"
@@ -118,7 +120,7 @@ const getItemGradient = (itemId: string) => {
 }
 
 export function CustomContent({ onBack }: CustomContentProps) {
-  const navigate = useNavigate()
+  const navigate = useLocalizedNavigate()
   const location = useLocation()
   const backRoute = (location.state as any)?.backRoute || "/speaking-modules"
   const { token, authData } = useAuth()
@@ -341,7 +343,7 @@ export function CustomContent({ onBack }: CustomContentProps) {
       // Add folder path for Custom-Content (pdfs/Custom-Content in DigitalOcean Spaces)
       formData.append("folder", "pdfs/Custom-Content")
 
-      const uploadResponse = await fetch("https://api.intelliviq.com/upload-pdf", {
+      const uploadResponse = await fetch(getUploadPdfUrl(), {
         method: "POST",
         body: formData,
       })

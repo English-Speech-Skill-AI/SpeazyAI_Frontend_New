@@ -854,11 +854,11 @@ export function StudentDetailsPage() {
                         })
                       }
                       
-                      // IELTS Score
+                      // IELTS based score
                       if (detailedResult.ielts_score !== undefined && detailedResult.ielts_score !== null) {
                         fieldsToShow.push({
                           key: "ielts_score",
-                          label: "IELTS Score",
+                          label: "IELTS based score",
                           getValue: (data) => data.ielts_score || "-"
                         })
                       }
@@ -1111,7 +1111,7 @@ export function StudentDetailsPage() {
                   if (detailedResult.ielts_score !== undefined && detailedResult.ielts_score !== null) {
                     fieldsToShow.push({
                       key: "ielts_score",
-                      label: "IELTS Score",
+                      label: "IELTS based score",
                       getValue: (data) => data.ielts_score || "-"
                     })
                   }
@@ -1232,7 +1232,7 @@ export function StudentDetailsPage() {
                   if (detailedResult.ielts_score !== undefined && detailedResult.ielts_score !== null) {
                     fieldsToShow.push({
                       key: "ielts_score",
-                      label: "IELTS Score",
+                      label: "IELTS based score",
                       getValue: (data) => data.ielts_score || "-"
                     })
                   }
@@ -1396,11 +1396,11 @@ export function StudentDetailsPage() {
                     })
                   }
                   
-                  // IELTS Score
+                  // IELTS based score
                   if (detailedResult.ielts_score !== undefined && detailedResult.ielts_score !== null) {
                     fieldsToShow.push({
                       key: "ielts_score",
-                      label: "IELTS Score",
+                      label: "IELTS based score",
                       getValue: (data) => data.ielts_score || "-"
                     })
                   }
@@ -1554,10 +1554,10 @@ export function StudentDetailsPage() {
                 })
               }
 
-              // IELTS Score
+              // IELTS based score
               if (detailedResult.ielts_score !== undefined || studentData.ielts_score !== undefined) {
                 metrics.push({
-                  label: "IELTS Score",
+                  label: "IELTS based score",
                   value: detailedResult.ielts_score ?? studentData.ielts_score ?? 0
                 })
               }

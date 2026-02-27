@@ -637,7 +637,7 @@ export function IELTSSpeakingTaskView() {
     return partResults;
   };
 
-  // Function to evaluate speaking response with ChatGPT for IELTS score
+  // Function to evaluate speaking response with ChatGPT for IELTS based score
   const evaluateWithChatGPT = async (
     questionId: number,
     questionText: string,
@@ -712,7 +712,7 @@ IMPORTANT SCORING RULES:
 - If there are frequent grammatical errors, limited vocabulary, or poor pronunciation, score BELOW 6.0
 - Only score 7.0+ if the response demonstrates strong language ability with good fluency, vocabulary, grammar, and pronunciation
 - Be STRICT: A score of 5.0 means "modest user" - not "good" performance
-- Consider the speech analysis scores: if fluency/pronunciation scores are low (<50), the IELTS score should reflect this
+- Consider the speech analysis scores: if fluency/pronunciation scores are low (<50), the IELTS based score should reflect this
 
 Format your response as JSON with the following structure:
 {
@@ -752,7 +752,7 @@ Be STRICT, ACCURATE, and HONEST. Do NOT inflate scores. Use official IELTS band 
       const chatGPTResult = await response.json();
       const ieltsScore = chatGPTResult.ieltsScore || 0;
 
-      // Store the IELTS score for this question with full breakdown
+      // Store the IELTS based score for this question with full breakdown
       setQuestionScores((prev) => {
         const newMap = new Map(prev);
         newMap.set(questionId, {
@@ -767,7 +767,7 @@ Be STRICT, ACCURATE, and HONEST. Do NOT inflate scores. Use official IELTS band 
         return newMap;
       });
 
-      console.log(`Question ${questionId} IELTS Score: ${ieltsScore}`, chatGPTResult);
+      console.log(`Question ${questionId} IELTS based score: ${ieltsScore}`, chatGPTResult);
       
       return {
         ieltsScore,
@@ -2701,7 +2701,7 @@ Be STRICT, ACCURATE, and HONEST. Do NOT inflate scores. Use official IELTS band 
                       }
                       
                       if (predictedText) {
-                        // Evaluate with ChatGPT for IELTS score (run in background)
+                        // Evaluate with ChatGPT for IELTS based score (run in background)
                         evaluateWithChatGPT(questionId, questionText, predictedText, apiResponse).catch((err) => {
                           console.error(`Background ChatGPT evaluation failed for cue card:`, err);
                         });

@@ -48,7 +48,7 @@ export async function main(event) {
     const requestBody = body || {};
     
     // Target API endpoint
-    const targetEndpoint = "https://api.exeleratetechnology.com/api/auth/login.php";
+    const targetEndpoint = "https://api.intelliviq.com/api/auth/login.php";
 
     const response = await fetch(targetEndpoint, {
       method: "POST",

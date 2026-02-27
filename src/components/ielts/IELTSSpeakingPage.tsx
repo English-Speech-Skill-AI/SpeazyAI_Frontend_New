@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLocalizedNavigate } from '../LocaleLayout';
 import { ArrowLeft, Mic, Loader2, AlertCircle, LogOut } from 'lucide-react';
 
 interface SpeakingItem {
@@ -23,7 +24,8 @@ interface SpeakingResponse {
 }
 
 export function IELTSSpeakingPage() {
-  const navigate = useNavigate();
+  const { t } = useTranslation();
+  const navigate = useLocalizedNavigate();
   const { token, logout } = useAuth();
   const [items, setItems] = useState<SpeakingItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,7 +35,7 @@ export function IELTSSpeakingPage() {
   useEffect(() => {
     const fetchSpeakingItems = async () => {
       if (!token) {
-        setError('Authentication required. Please log in.');
+        setError(t('modules.ielts.authRequired'));
         setLoading(false);
         return;
       }
@@ -66,7 +68,7 @@ export function IELTSSpeakingPage() {
         }
       } catch (err: any) {
         console.error('Error fetching speaking content:', err);
-        setError(err.message || 'Failed to load speaking content. Please try again.');
+        setError(err.message || t('modules.ielts.loadFailed'));
         setItems([]);
       } finally {
         setLoading(false);
@@ -74,7 +76,7 @@ export function IELTSSpeakingPage() {
     };
 
     fetchSpeakingItems();
-  }, [token]);
+  }, [token, t]);
 
   const deriveContentId = (item: SpeakingItem): string | null => {
     if (item.content_id) return item.content_id;
@@ -232,11 +234,11 @@ export function IELTSSpeakingPage() {
             }}
           >
             <ArrowLeft style={{ width: '16px', height: '16px', marginRight: '8px' }} />
-            Back
+            {t('modules.back')}
           </button>
           <h1 style={titleStyle}>
             <Mic style={{ width: '24px', height: '24px', color: '#ec4899' }} />
-            IELTS Speaking
+            {t('modules.ielts.speaking')}
           </h1>
           <button
             onClick={() => {
@@ -288,7 +290,7 @@ export function IELTSSpeakingPage() {
         ) : items.length === 0 ? (
           <div style={loadingStyle}>
             <Mic style={{ width: '64px', height: '64px', color: '#6b7280', opacity: 0.5 }} />
-            <p style={{ color: '#9ca3af' }}>No speaking content available</p>
+            <p style={{ color: '#9ca3af' }}>{t('modules.ielts.noContentAvailable')}</p>
           </div>
         ) : (
           /* Tiles Grid */

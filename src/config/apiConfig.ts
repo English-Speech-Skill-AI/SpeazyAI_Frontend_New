@@ -12,6 +12,7 @@ const DIGITALOCEAN_FUNCTIONS = {
   pdfProxy: import.meta.env.VITE_PDF_PROXY_URL || `${DO_BASE}/pdfProxy`,
   pdfExtractProxy: import.meta.env.VITE_PDF_EXTRACT_PROXY_URL || `${DO_BASE}/pdfExtractProxy`,
   supportProxy: import.meta.env.VITE_SUPPORT_PROXY_URL || `${DO_BASE}/supportProxy`,
+  uploadPdfProxy: import.meta.env.VITE_UPLOAD_PDF_PROXY_URL || `${DO_BASE}/uploadPdfProxy`,
 };
 
 // Local development proxy URLs (if running proxy servers locally)
@@ -34,12 +35,9 @@ const NETLIFY_FUNCTIONS = {
   supportProxy: '/.netlify/functions/supportProxy',
 };
 
-// Choose which API provider to use
-// Set via VITE_API_PROVIDER, or auto-detect:
-// - localhost -> 'local'
-// - *.netlify.app (e.g. speazyai.netlify.app) -> 'netlify'
-// - otherwise -> 'digitalocean'
-const API_PROVIDER = (import.meta.env.VITE_API_PROVIDER || (isLocal ? 'local' : (isNetlify ? 'netlify' : 'digitalocean'))) as 'digitalocean' | 'local' | 'netlify';
+// Always use DigitalOcean proxy (including when on localhost).
+// Override with VITE_API_PROVIDER=local or netlify if needed.
+const API_PROVIDER = (import.meta.env.VITE_API_PROVIDER || 'digitalocean') as 'digitalocean' | 'local' | 'netlify';
 
 // Get the appropriate URL based on provider and environment
 function getApiUrl(functionName: keyof typeof DIGITALOCEAN_FUNCTIONS): string {
@@ -90,4 +88,10 @@ export const API_CONFIG = {
 // Base URL for direct API calls (org, users, reading, ielts, etc.).
 export const getExelerateApiBase = (): string => {
   return 'https://api.intelliviq.com';
+};
+
+// Upload PDF - use direct API. Backend (api.intelliviq.com/upload-pdf) must allow CORS for your origin.
+// Serverless proxies (Netlify, DigitalOcean) have ~6MB request limits causing 413 for larger PDFs.
+export const getUploadPdfUrl = (): string => {
+  return `${getExelerateApiBase()}/upload-pdf`;
 };

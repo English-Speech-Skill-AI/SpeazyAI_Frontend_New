@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { useLocation } from "react-router-dom";
+import { useLocalizedNavigate } from "./LocaleLayout";
+import { getUploadPdfUrl } from "@/config/apiConfig";
 import {
     Card,
     CardContent,
@@ -132,7 +135,8 @@ interface ContentLibraryProps {
 }
 
 export function ContentLibrary({ onBack }: ContentLibraryProps) {
-    const navigate = useNavigate()
+    const { t } = useTranslation()
+    const navigate = useLocalizedNavigate()
     const location = useLocation()
     const backRoute = (location.state as any)?.backRoute || "/reading-modules"
     
@@ -193,7 +197,7 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
 
                 setContentItems(items);
             } catch (error) {
-                toast.error("Failed to load content library. Please try again.");
+                toast.error(t("contentLibrary.failedToLoadContent"));
                 setContentItems([]);
             } finally {
                 setIsLoadingContent(false);
@@ -269,7 +273,7 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
         if (file) {
             // Validate PDF type
             if (file.type !== "application/pdf") {
-                toast.error("Please select a PDF file only");
+                toast.error(t("contentLibrary.pleaseSelectPdfOnly"));
                 event.target.value = ""; // Reset input
                 setSelectedFile(null);
                 return;
@@ -304,25 +308,25 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
     const handleUpload = async () => {
         // Validation
         if (!newTitle.trim()) {
-            toast.error("Please enter a title");
+            toast.error(t("contentLibrary.pleaseEnterTitle"));
             return;
         }
         if (!selectedClass) {
-            toast.error("Please select a class");
+            toast.error(t("contentLibrary.pleaseSelectClass"));
             return;
         }
         if (!chapterName.trim()) {
-            toast.error("Please enter a chapter name");
+            toast.error(t("contentLibrary.pleaseEnterChapter"));
             return;
         }
         if (!selectedFile) {
-            toast.error("Please select a PDF file");
+            toast.error(t("contentLibrary.pleaseSelectPdf"));
             return;
         }
 
         // Validate PDF type again
         if (selectedFile.type !== "application/pdf") {
-            toast.error("Only PDF files are allowed");
+            toast.error(t("contentLibrary.onlyPdfFilesAllowed"));
             return;
         }
 
@@ -339,7 +343,7 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
             const formData = new FormData();
             formData.append("file", selectedFile);
 
-            const uploadResponse = await fetch("https://api.intelliviq.com/upload-pdf", {
+            const uploadResponse = await fetch(getUploadPdfUrl(), {
                 method: "POST",
                 body: formData,
             });
@@ -521,7 +525,7 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
                                 <Library className="w-5 h-5 text-white" />
                             </div>
                             <h1 className="text-lg" style={{ color: TEXT_LIGHT }}>
-                                Content Library
+                                {t("contentLibrary.title")}
                             </h1>
                         </div>
 
@@ -553,7 +557,7 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
                                         }}
                                     >
                                         <Plus style={{ width: "16px", height: "16px" }} />
-                                        Upload Content
+                                        {t("contentLibrary.uploadContent")}
                                     </Button>
                                 </DialogTrigger>
                             <DialogContent 
@@ -587,7 +591,7 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
                                         }}
                                     >
                                         <Upload style={{ width: "20px", height: "20px", color: "#3B82F6" }} />
-                                        Upload New Content
+                                        {t("contentLibrary.uploadNewContent")}
                                     </DialogTitle>
                                     <DialogDescription 
                                         style={{
@@ -597,7 +601,7 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
                                             lineHeight: "1.5",
                                         }}
                                     >
-                                        Add a new PDF document to your content library. All files are stored securely.
+                                        {t("contentLibrary.addPdfDesc")}
                                     </DialogDescription>
                                 </DialogHeader>
                                 
@@ -612,7 +616,7 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
                                                 fontSize: "14px",
                                             }}
                                         >
-                                            Class <span style={{ color: "#EF4444" }}>*</span>
+                                            {t("contentLibrary.class")} <span style={{ color: "#EF4444" }}>*</span>
                                         </Label>
                                         <div style={{ position: "relative", width: "100%" }}>
                                             <Select
@@ -661,7 +665,7 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
                                                     }}
                                                 >
                                                     <SelectValue 
-                                                        placeholder={classOptions.length === 0 ? "No classes assigned" : "Select a class"}
+                                                        placeholder={classOptions.length === 0 ? t("contentLibrary.noClassesAssigned") : t("contentLibrary.selectClass")}
                                                         style={{
                                                             color: selectedClass ? "#0F1F47" : "rgba(15, 31, 71, 0.6)",
                                                             display: "block",
@@ -717,7 +721,7 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
                                                                 cursor: "not-allowed",
                                                             }}
                                                         >
-                                                            No classes assigned
+                                                            {t("contentLibrary.noClassesAssigned")}
                                                         </SelectItem>
                                                     )}
                                                 </SelectContent>
@@ -735,11 +739,11 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
                                                 fontSize: "14px",
                                             }}
                                         >
-                                            Title <span style={{ color: "#EF4444" }}>*</span>
+                                            {t("contentLibrary.titleLabel")} <span style={{ color: "#EF4444" }}>*</span>
                                         </Label>
                                         <Input
                                             id="title"
-                                            placeholder="Enter content title"
+                                            placeholder={t("contentLibrary.enterTitle")}
                                             value={newTitle}
                                             onChange={(e) => setNewTitle(e.target.value)}
                                             disabled={isUploading}
@@ -765,11 +769,11 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
                                                 fontSize: "14px",
                                             }}
                                         >
-                                            Chapter <span style={{ color: "#EF4444" }}>*</span>
+                                            {t("contentLibrary.chapter")} <span style={{ color: "#EF4444" }}>*</span>
                                         </Label>
                                         <Input
                                             id="chapter"
-                                            placeholder="Enter chapter name"
+                                            placeholder={t("contentLibrary.enterChapter")}
                                             value={chapterName}
                                             onChange={(e) => setChapterName(e.target.value)}
                                             disabled={isUploading}
@@ -851,7 +855,7 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
                                                 ) : (
                                                     <>
                                                         <Upload style={{ width: "16px", height: "16px", marginRight: "8px", color: "#3B82F6" }} />
-                                                        Choose file
+                                                        {t("contentLibrary.chooseFile")}
                                                     </>
                                                 )}
                                             </label>
@@ -903,7 +907,7 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
                                                 margin: 0,
                                             }}
                                         >
-                                            Only PDF files are allowed. Maximum file size: 50MB
+                                            {t("contentLibrary.onlyPdfAllowed")}
                                         </p>
                                     </div>
 
@@ -911,7 +915,7 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
                                     {isUploading && (
                                         <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                                             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "14px" }}>
-                                                <span style={{ color: "#0F1F47", fontWeight: 500 }}>Upload Progress</span>
+                                                <span style={{ color: "#0F1F47", fontWeight: 500 }}>{t("contentLibrary.uploadProgress")}</span>
                                                 <span style={{ color: "#3B82F6", fontWeight: 600 }}>{Math.round(uploadProgress)}%</span>
                                 </div>
                                             <div 
@@ -936,16 +940,16 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
                                             </div>
                                             <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12px", color: "rgba(15, 31, 71, 0.7)" }}>
                                                 {uploadProgress < 30 && (
-                                                    <span>Generating upload URL...</span>
+                                                    <span>{t("contentLibrary.generatingUrl")}</span>
                                                 )}
                                                 {uploadProgress >= 30 && uploadProgress < 70 && (
-                                                    <span>Uploading PDF to storage...</span>
+                                                    <span>{t("contentLibrary.uploadingPdf")}</span>
                                                 )}
                                                 {uploadProgress >= 70 && uploadProgress < 100 && (
-                                                    <span>Saving metadata...</span>
+                                                    <span>{t("contentLibrary.savingMetadata")}</span>
                                                 )}
                                                 {uploadProgress === 100 && (
-                                                    <span style={{ color: "#10B981", fontWeight: 500 }}>Upload complete!</span>
+                                                    <span style={{ color: "#10B981", fontWeight: 500 }}>{t("contentLibrary.uploadComplete")}</span>
                                                 )}
                                             </div>
                                         </div>
@@ -972,7 +976,7 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
                                                             margin: "0 0 8px 0",
                                                         }}
                                                     >
-                                                        Content uploaded successfully!
+                                                        {t("contentLibrary.contentUploadedSuccess")}
                                                     </p>
                                     <Button
                                                         onClick={handleQuickView}
@@ -998,7 +1002,7 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
                                                         }}
                                                     >
                                                         <ExternalLink style={{ width: "16px", height: "16px" }} />
-                                                        Quick View PDF
+                                                        {t("contentLibrary.quickViewPdf")}
                                                     </Button>
                                                 </div>
                                             </div>
@@ -1026,7 +1030,7 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
                                                             margin: "0 0 4px 0",
                                                         }}
                                                     >
-                                                        Upload Failed
+                                                        {t("contentLibrary.uploadFailed")}
                                                     </p>
                                                     <p 
                                                         style={{
@@ -1062,7 +1066,7 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
                                                             color: "#0F1F47",
                                                         }}
                                                     >
-                                                        PDF Preview Available
+                                                        {t("contentLibrary.pdfPreviewAvailable")}
                                                     </span>
                                                 </div>
                                                 <Button
@@ -1092,7 +1096,7 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
                                                     }}
                                                 >
                                                     <Eye style={{ width: "16px", height: "16px" }} />
-                                                    Quick View
+                                                    {t("contentLibrary.quickView")}
                                     </Button>
                                             </div>
                                         </div>
@@ -1135,7 +1139,7 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
                                             }
                                         }}
                                     >
-                                        {uploadStatus === "success" ? "Close" : "Cancel"}
+                                        {uploadStatus === "success" ? t("contentLibrary.close") : t("contentLibrary.cancel")}
                                     </Button>
                                     <Button
                                         onClick={handleUpload}
@@ -1179,12 +1183,12 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
                                         {isUploading ? (
                                             <>
                                                 <Upload className="pulse-animation" style={{ width: "16px", height: "16px" }} />
-                                                Uploading...
+                                                {t("contentLibrary.uploading")}
                                             </>
                                         ) : (
                                             <>
                                                 <Upload style={{ width: "16px", height: "16px" }} />
-                                        Upload
+                                        {t("contentLibrary.upload")}
                                             </>
                                         )}
                                     </Button>
@@ -1203,11 +1207,11 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
                     <div className="flex items-center gap-3 mb-2">
                         <Sparkles className="w-8 h-8 text-[#FFD600]" />
                         <h2 className="text-3xl" style={{ color: TEXT_LIGHT }}>
-                            Your Content Library
+                            {t("contentLibrary.yourContentLibrary")}
                         </h2>
                     </div>
                     <p style={{ color: TEXT_MUTED }}>
-                        Manage and view all your uploaded learning materials in one place
+                        {t("contentLibrary.manageMaterials")}
                     </p>
                 </div>
 
@@ -1216,7 +1220,7 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
                     <CardHeader className="border-b border-[#E5E7EB]">
                         <CardTitle className="text-[#0F1F47] flex items-center gap-2">
                             <FileText className="w-5 h-5 text-[#3B82F6]" />
-                            All Content
+                            {t("contentLibrary.allContent")}
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="p-0">
@@ -1225,19 +1229,19 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
                                 <TableHeader>
                                     <TableRow className="bg-[#F2F3F4] hover:bg-[#F2F3F4]">
                                         <TableHead className="text-[#0F1F47]">
-                                            Title
+                                            {t("contentLibrary.titleCol")}
                                         </TableHead>
                                         <TableHead className="text-[#0F1F47]">
-                                            Class Name
+                                            {t("contentLibrary.className")}
                                         </TableHead>
                                         <TableHead className="text-[#0F1F47]">
-                                            Chapter
+                                            {t("contentLibrary.chapterCol")}
                                         </TableHead>
                                         <TableHead className="text-[#0F1F47]">
-                                            Upload Date
+                                            {t("contentLibrary.uploadDate")}
                                         </TableHead>
                                         <TableHead className="text-[#0F1F47] text-right">
-                                            Actions
+                                            {t("contentLibrary.actions")}
                                         </TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -1250,7 +1254,7 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
                                             >
                                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                                                     <div style={{ width: '32px', height: '32px', border: '3px solid #E5E7EB', borderTopColor: '#3B82F6', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-                                                    <p style={{ margin: 0, color: '#0F1F47' }}>Loading content...</p>
+                                                    <p style={{ margin: 0, color: '#0F1F47' }}>{t("contentLibrary.loadingContent")}</p>
                                                 </div>
                                             </TableCell>
                                         </TableRow>
@@ -1261,9 +1265,9 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
                                                 className="text-center py-12 text-[#0F1F47]/50"
                                             >
                                                 <FileText className="w-12 h-12 mx-auto mb-3 text-[#0F1F47]/30" />
-                                                <p className="mb-2">No content uploaded yet</p>
+                                                <p className="mb-2">{t("contentLibrary.noContentYet")}</p>
                                                 <p className="text-sm">
-                                                    Click the "Upload Content" button to get started
+                                                    {t("contentLibrary.clickToUpload")}
                                                 </p>
                                             </TableCell>
                                         </TableRow>
@@ -1296,7 +1300,7 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
                                                                 className="bg-gradient-to-br from-[#3B82F6] to-[#00B9FC] text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
                                                             >
                                                                 <Eye className="w-4 h-4 mr-2" />
-                                                                View PDF
+                                                                {t("contentLibrary.viewPdf")}
                                                             </Button>
                                                         </DialogTrigger>
                                                         <DialogContent className="bg-white p-0 overflow-hidden" style={{ width: "min(95vw, 1024px)", maxWidth: "95vw", maxHeight: "85vh", height: "85vh", display: "flex", flexDirection: "column" }}>
@@ -1338,7 +1342,7 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
                                                                     {item.title}
                                                                 </DialogTitle>
                                                                 <DialogDescription className="text-[#0F1F47]/70 text-sm mt-1">
-                                                                    {item.className} • {item.chapter} • Uploaded on{" "}
+                                                                    {item.className} • {item.chapter} • {t("contentLibrary.uploadedOn")}{" "}
                                                                     {new Date(item.uploadDate).toLocaleDateString()}
                                                                 </DialogDescription>
                                                             </DialogHeader>
@@ -1408,7 +1412,7 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
                                                                                 }}
                                                                             >
                                                                                 <ExternalLink style={{ width: "16px", height: "16px" }} />
-                                                                                Open in New Tab
+                                                                                {t("contentLibrary.openInNewTab")}
                                                                             </Button>
                                                                         </div>
                                                                     </>
@@ -1423,7 +1427,7 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
                                                                         height: '100%'
                                                                     }}>
                                                                         <FileText style={{ width: "64px", height: "64px", color: "#9CA3AF", margin: "0 auto 16px" }} />
-                                                                        <p style={{ color: "#6B7280", fontSize: "14px", margin: 0, fontWeight: 500 }}>PDF URL not available</p>
+                                                                        <p style={{ color: "#6B7280", fontSize: "14px", margin: 0, fontWeight: 500 }}>{t("contentLibrary.pdfUrlNotAvailable")}</p>
                                                                     </div>
                                                                 )}
                                                             </div>
@@ -1448,10 +1452,10 @@ export function ContentLibrary({ onBack }: ContentLibraryProps) {
                             </div>
                             <div>
                                 <h3 className="text-white mb-1">
-                                    Upload Your Own Materials
+                                    {t("contentLibrary.uploadYourMaterials")}
                                 </h3>
                                 <p className="text-white/90 text-sm">
-                                    Add your presentations, speech notes, and learning materials to practice with personalized content. All files are stored securely and can be accessed anytime.
+                                    {t("contentLibrary.uploadMaterialsDesc")}
                                 </p>
                             </div>
                         </div>

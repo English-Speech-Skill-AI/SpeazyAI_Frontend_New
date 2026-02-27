@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { ArrowLeft, Send, Loader2 } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { API_URLS } from '@/config/apiConfig';
+import { useTranslation } from "react-i18next";
+import { useLanguage } from "../LocaleLayout";
 
 interface WritingPracticeQuestionProps {
   question: string;
@@ -24,6 +26,7 @@ function HighlightedText({
   text: string; 
   corrections: Correction[] 
 }) {
+  const { t } = useTranslation();
   const [activeCorrection, setActiveCorrection] = useState<Correction | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
 
@@ -78,13 +81,14 @@ function HighlightedText({
   };
 
   return (
-    <div style={{ position: "relative" }}>
+    <div style={{ position: "relative" }} dir="ltr">
       <p style={{ 
         color: "#1E3A8A", 
         lineHeight: 1.8, 
         fontSize: "16px",
         margin: 0,
-        whiteSpace: "pre-wrap"
+        whiteSpace: "pre-wrap",
+        textAlign: "left"
       }}>
         {segments.map((segment, idx) => {
           if (segment.correction) {
@@ -151,7 +155,7 @@ function HighlightedText({
               fontWeight: 600,
               letterSpacing: "0.5px"
             }}>
-              Original
+              {t("writingPractice.original")}
             </span>
             <p style={{ 
               margin: "4px 0 0 0", 
@@ -171,7 +175,7 @@ function HighlightedText({
               fontWeight: 600,
               letterSpacing: "0.5px"
             }}>
-              Corrected
+              {t("writingPractice.corrected")}
             </span>
             <p style={{ 
               margin: "4px 0 0 0", 
@@ -191,7 +195,7 @@ function HighlightedText({
               fontWeight: 600,
               letterSpacing: "0.5px"
             }}>
-              Why?
+              {t("writingPractice.why")}
             </span>
             <p style={{ 
               margin: "4px 0 0 0", 
@@ -214,6 +218,8 @@ export function WritingPracticeQuestion({
   onBack,
   level,
 }: WritingPracticeQuestionProps) {
+  const { t } = useTranslation();
+  const { locale } = useLanguage();
   const [answer, setAnswer] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [results, setResults] = useState<any>(null);
@@ -223,7 +229,7 @@ export function WritingPracticeQuestion({
 
   const handleSubmit = async () => {
     if (!answer.trim()) {
-      setError("Please write your answer before submitting.");
+      setError(t("writingPractice.pleaseWriteAnswer"));
       return;
     }
 
@@ -244,6 +250,7 @@ export function WritingPracticeQuestion({
           question: question,
           answer: answer,
           level: level,
+          locale: locale,
         }),
       });
 
@@ -271,9 +278,9 @@ export function WritingPracticeQuestion({
       hasSavedRef.current = false;
     } catch (err: any) {
       if (err.message?.includes("Failed to fetch") || err.message?.includes("NetworkError") || err.code === "ERR_NETWORK") {
-        setError("Cannot connect to the ChatGPT proxy server. Please make sure the server is running on port 4000. Run 'npm run proxy:chatgpt' in a separate terminal.");
+        setError(t("writingPractice.networkError"));
       } else {
-        setError(err.message || "Failed to submit your answer. Please try again.");
+        setError(err.message || t("writingPractice.submitFailed"));
       }
       console.error("Error submitting answer:", err);
     } finally {
@@ -289,12 +296,12 @@ export function WritingPracticeQuestion({
         return;
       }
 
-      // Extract IELTS score from results
+      // Extract IELTS based score from results
       const ieltsScore = results.ieltsScore;
       
-      // Only save if we have a valid IELTS score
+      // Only save if we have a valid IELTS based score
       if (!ieltsScore || ieltsScore === "N/A") {
-        console.log("No valid IELTS score to save");
+        console.log("No valid IELTS based score to save");
         return;
       }
 
@@ -607,9 +614,9 @@ export function WritingPracticeQuestion({
                 }}
               >
                 <ArrowLeft style={{ width: "16px", height: "16px" }} />
-                Try Again
+                {t("writingPractice.tryAgain")}
               </button>
-              <h1 style={styles.headerTitle}>Writing Assessment Results</h1>
+              <h1 style={styles.headerTitle}>{t("writingPractice.writingAssessmentResults")}</h1>
               <div style={styles.spacer} />
             </div>
           </div>
@@ -618,29 +625,28 @@ export function WritingPracticeQuestion({
         <div style={styles.mainContent}>
           <div style={styles.card}>
             <div style={styles.cardHeader}>
-              <h2 style={styles.cardTitleLarge}>Your Assessment</h2>
+              <h2 style={styles.cardTitleLarge}>{t("writingPractice.yourAssessment")}</h2>
             </div>
             <div style={styles.cardContent}>
               {/* Score Box */}
               <div style={styles.scoreBox}>
-                <h3 style={styles.scoreTitle}>IELTS Score</h3>
+                <h3 style={styles.scoreTitle}>IELTS based score</h3>
                 <div style={styles.scoreValue}>
                   {results.ieltsScore || "N/A"}
                 </div>
-                <p style={styles.scoreLabel}>Band Score</p>
+                <p style={styles.scoreLabel}>{t("writingPractice.bandScore")}</p>
               </div>
 
               {/* Your Writing with Highlights */}
-              <div style={styles.yourWritingBox}>
-                <h4 style={styles.feedbackTitle}>Your Writing (with corrections)</h4>
+              <div style={styles.yourWritingBox} dir="ltr">
+                <h4 style={styles.feedbackTitle}>{t("writingPractice.yourWritingWithCorrections")}</h4>
                 
                 {/* Hint about highlights */}
                 {results.corrections && results.corrections.length > 0 && (
                   <div style={styles.highlightHint}>
                     <span>💡</span>
                     <span>
-                      <span style={styles.highlightSample}>Yellow highlighted</span> text needs improvement. 
-                      Hover over it to see the correction.
+                                {t("writingPractice.highlightHint")}
                     </span>
                   </div>
                 )}
@@ -654,14 +660,14 @@ export function WritingPracticeQuestion({
               <div style={styles.feedbackSection}>
                 {/* Overall Feedback */}
                 <div>
-                  <h4 style={styles.feedbackTitle}>Overall Feedback</h4>
+                  <h4 style={styles.feedbackTitle}>{t("writingPractice.overallFeedback")}</h4>
                   <p style={styles.feedbackText}>{results.feedback || results.response}</p>
                 </div>
 
                 {/* Detailed Breakdown */}
                 {results.breakdown && (
                   <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                    <h4 style={styles.feedbackTitle}>Detailed Breakdown</h4>
+                    <h4 style={styles.feedbackTitle}>{t("writingPractice.detailedBreakdown")}</h4>
                     {Object.entries(results.breakdown).map(([key, value]: [string, any]) => (
                       <div key={key} style={styles.breakdownItem}>
                         <h5 style={styles.breakdownTitle}>
@@ -676,7 +682,7 @@ export function WritingPracticeQuestion({
                 {/* Strengths */}
                 {results.strengths && results.strengths.length > 0 && (
                   <div>
-                    <h4 style={styles.feedbackTitle}>✨ Strengths</h4>
+                    <h4 style={styles.feedbackTitle}>✨ {t("writingPractice.strengths")}</h4>
                     <ul style={styles.suggestionsList}>
                       {results.strengths.map((strength: string, idx: number) => (
                         <li key={idx}>{strength}</li>
@@ -688,7 +694,7 @@ export function WritingPracticeQuestion({
                 {/* Suggestions */}
                 {results.suggestions && results.suggestions.length > 0 && (
                   <div>
-                    <h4 style={styles.feedbackTitle}>📝 Suggestions for Improvement</h4>
+                    <h4 style={styles.feedbackTitle}>📝 {t("writingPractice.suggestionsForImprovement")}</h4>
                     <ul style={styles.suggestionsList}>
                       {results.suggestions.map((suggestion: string, idx: number) => (
                         <li key={idx}>{suggestion}</li>
@@ -720,9 +726,9 @@ export function WritingPracticeQuestion({
               }}
             >
               <ArrowLeft style={{ width: "16px", height: "16px" }} />
-              Back
+              {t("writingPractice.back")}
             </button>
-            <h1 style={styles.headerTitle}>Writing Practice</h1>
+            <h1 style={styles.headerTitle}>{t("writingPractice.title")}</h1>
             <div style={styles.spacer} />
           </div>
         </div>
@@ -734,20 +740,21 @@ export function WritingPracticeQuestion({
             <h2 style={styles.cardTitle}>{questionTitle}</h2>
           </div>
           <div style={styles.cardContent}>
-            <div style={styles.questionBox}>
-              <h3 style={styles.questionLabel}>Question</h3>
-              <p style={styles.questionText}>{question}</p>
+            <div style={styles.questionBox} dir="ltr">
+              <h3 style={styles.questionLabel}>{t("writingPractice.question")}</h3>
+              <p style={{ ...styles.questionText, textAlign: "left" }}>{question}</p>
             </div>
 
-            <div style={styles.answerSection}>
+            <div style={styles.answerSection} dir="ltr">
               <label htmlFor="answer" style={styles.answerLabel}>
-                Your Answer
+                {t("writingPractice.yourAnswer")}
               </label>
               <textarea
                 id="answer"
                 value={answer}
                 onChange={(e) => setAnswer(e.target.value)}
-                placeholder="Write your answer here..."
+                placeholder={t("writingPractice.writeAnswerPlaceholder")}
+                dir="ltr"
                 style={styles.textarea}
                 onFocus={(e) => {
                   e.currentTarget.style.borderColor = "#3B82F6";
@@ -758,7 +765,7 @@ export function WritingPracticeQuestion({
                   e.currentTarget.style.boxShadow = "none";
                 }}
               />
-              <p style={styles.charCount}>{answer.length} characters</p>
+              <p style={styles.charCount}>{answer.length} {t("writingPractice.characters")}</p>
             </div>
 
             {error && (
@@ -786,12 +793,12 @@ export function WritingPracticeQuestion({
               {isSubmitting ? (
                 <>
                   <Loader2 style={{ width: "20px", height: "20px", animation: "spin 1s linear infinite" }} />
-                  Submitting...
+                  {t("writingPractice.submitting")}
                 </>
               ) : (
                 <>
                   <Send style={{ width: "20px", height: "20px" }} />
-                  Submit for Assessment
+                  {t("writingPractice.submitForAssessment")}
                 </>
               )}
             </button>

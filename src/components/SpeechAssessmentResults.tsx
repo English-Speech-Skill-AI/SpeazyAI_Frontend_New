@@ -4,6 +4,8 @@ import React from "react"
 
 //@ts-ignore
 import { useState, useRef, useEffect } from "react"
+import { useTranslation } from "react-i18next"
+import { useLanguage } from "./LocaleLayout"
 import { API_URLS } from '@/config/apiConfig';
 import { Card, CardHeader, CardContent, CardTitle } from "./ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog"
@@ -13,6 +15,8 @@ import { EmbeddedPhonemeChart } from "./EmbeddedPhonemeChart"
 type NavigationItem = "pronunciation" | "fluency" | "vocabulary" | "grammar" | "phoneme-guide"
 
 export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
+  const { t } = useTranslation()
+  const { locale } = useLanguage()
   const [activeSection, setActiveSection] = useState<NavigationItem>("pronunciation")
   const [selectedWord, setSelectedWord] = useState<string | null>(null)
   const [isRecording, setIsRecording] = useState(false)
@@ -163,15 +167,19 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
     try {
       const wordList = [...new Set(predictedWords)].slice(0, 50).join(", ")
       const proxyUrl = API_URLS.chatgptProxy
+      const langInstruction = locale === "ar"
+        ? " CRITICAL: Respond ONLY in Arabic (العربية). All your output—synonyms, examples, explanations—must be in Arabic."
+        : ""
       const resp = await fetch(proxyUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           mode: "chat",
+          locale,
           messages: [
             {
               role: "system",
-              content: "You are a vocabulary coach. You must ONLY choose words from the exact list the user provides—words the user actually spoke. Do not add or suggest any word that is not in that list. From the user's list, pick only words that are relatively difficult or advanced (skip fillers like Mhmm, uh, um, and very common words like the, a, is, to). If the list has no difficult words, reply with exactly: No difficult words in this transcript. For each chosen word from the list only, provide: (1) the word and 1–2 synonyms, (2) a short example sentence, (3) how it improves vocabulary. Be concise. Do not use markdown (no **, no *, no #). Return plain text only. Use clear line breaks between each word's section.",
+              content: "You are a vocabulary coach. You must ONLY choose words from the exact list the user provides—words the user actually spoke. Do not add or suggest any word that is not in that list. From the user's list, pick only words that are relatively difficult or advanced (skip fillers like Mhmm, uh, um, and very common words like the, a, is, to). If the list has no difficult words, reply with exactly: No difficult words in this transcript. For each chosen word from the list only, provide: (1) the word and 1–2 synonyms, (2) a short example sentence, (3) how it improves vocabulary. Be concise. Do not use markdown (no **, no *, no #). Return plain text only. Use clear line breaks between each word's section." + langInstruction,
             },
             {
               role: "user",
@@ -184,15 +192,15 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
       clearTimeout(timeoutId)
       const json = await resp.json().catch(() => ({}))
       if (!resp.ok) {
-        setVocabularySynonyms("Could not load synonyms. Please try again.")
+        setVocabularySynonyms(t("speechResults.couldNotLoadSynonyms"))
         return
       }
       let text = (json?.response ?? json?.content ?? json?.message ?? "").trim()
       text = text.replace(/\*\*/g, "")
-      setVocabularySynonyms(text || "No synonyms available.")
+      setVocabularySynonyms(text || t("speechResults.noSynonymsAvailable"))
     } catch (e: any) {
       clearTimeout(timeoutId)
-      setVocabularySynonyms(e?.name === "AbortError" ? "Request timed out. Try again." : "Could not load synonyms. Please try again.")
+      setVocabularySynonyms(e?.name === "AbortError" ? t("speechResults.requestTimeout") : t("speechResults.couldNotLoadSynonyms"))
     } finally {
       setLoadingVocabularySynonyms(false)
     }
@@ -210,13 +218,14 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
       const proxyUrl = API_URLS.chatgptProxy
       const noMarkdown = "Do not use markdown (no **, no *, no #). Return plain text only."
       const tonePrompt = grammarToneOption === "Custom"
-        ? `Rewrite the following text in the style or tone the user requested. Return ONLY the rewritten text, no explanation. ${noMarkdown}`
-        : `Rewrite the following text in a ${grammarToneOption.toLowerCase()} tone/style. Return ONLY the rewritten text, no explanation or preamble. ${noMarkdown}`
+        ? `Rewrite the following text in the style or tone the user requested. Return ONLY the rewritten text in English, no explanation. ${noMarkdown}`
+        : `Rewrite the following text in a ${grammarToneOption.toLowerCase()} tone/style. Return ONLY the rewritten text in English, no explanation or preamble. ${noMarkdown}`
       const resp = await fetch(proxyUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           mode: "chat",
+          locale,
           messages: [
             { role: "system", content: tonePrompt },
             { role: "user", content: originalText },
@@ -228,7 +237,7 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
       const json = await resp.json().catch(() => ({}))
       if (!resp.ok) {
         const errMsg = (json?.error && typeof json.error === "string") ? json.error : `API error: ${resp.status}`
-        setImprovedText(`${errMsg}. Please try again.`)
+        setImprovedText(`${errMsg}. ${t("speechResults.pleaseTryAgain")}`)
         return
       }
       if (json?.error) {
@@ -237,13 +246,13 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
       }
       let text = (json?.response ?? json?.content ?? json?.message ?? "").trim()
       text = text.replace(/\*\*/g, "") // strip any ** from response
-      setImprovedText(text || "No response returned. Please try again.")
+      setImprovedText(text || t("speechResults.noResponseReturned"))
     } catch (e: any) {
       clearTimeout(timeoutId)
       if (e?.name === "AbortError") {
-        setImprovedText("Request took too long. Please try again.")
+        setImprovedText(t("speechResults.improveRequestTimeout"))
       } else {
-        setImprovedText("Failed to get improved text. Please check your connection and try again.")
+        setImprovedText(t("speechResults.improveFailed"))
       }
     } finally {
       setImprovingTone(false)
@@ -264,13 +273,17 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
         ? errors.map((e: any) => typeof e === "string" ? e : (e?.mistake ? `${e.mistake} → ${e?.correction || ""}` : "")).filter(Boolean).join("; ")
         : "none specifically detected"
       const proxyUrl = API_URLS.chatgptProxy
+      const langInstruction = locale === "ar"
+        ? " CRITICAL: Respond ONLY in Arabic (العربية). All tips must be in Arabic."
+        : ""
       const resp = await fetch(proxyUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           mode: "chat",
+          locale,
           messages: [
-            { role: "system", content: "You are a friendly English grammar coach. Give 2–3 short, actionable tips to improve the user's grammar. Be concise and encouraging. No preamble. Do not use markdown (no **, no *, no #). Return plain text only." },
+            { role: "system", content: "You are a friendly English grammar coach. Give 2–3 short, actionable tips to improve the user's grammar. Be concise and encouraging. No preamble. Do not use markdown (no **, no *, no #). Return plain text only." + langInstruction },
             { role: "user", content: `Text the user said: "${originalText.slice(0, 1500)}". Grammar issues: ${errorsStr}. Give 2–3 brief tips to improve.` },
           ],
         }),
@@ -279,15 +292,15 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
       clearTimeout(timeoutId)
       const json = await resp.json().catch(() => ({}))
       if (!resp.ok) {
-        setGrammarTip("Could not load tips. Please try again.")
+        setGrammarTip(t("speechResults.couldNotLoadTips"))
         return
       }
       let text = (json?.response ?? json?.content ?? json?.message ?? "").trim()
       text = text.replace(/\*\*/g, "") // strip any ** from response
-      setGrammarTip(text || "No tips available.")
+      setGrammarTip(text || t("speechResults.noTipsAvailable"))
     } catch (e: any) {
       clearTimeout(timeoutId)
-      setGrammarTip(e?.name === "AbortError" ? "Request timed out. Try again." : "Could not load tips. Please try again.")
+      setGrammarTip(e?.name === "AbortError" ? t("speechResults.requestTimeout") : t("speechResults.couldNotLoadTips"))
     } finally {
       setLoadingGrammarTip(false)
       grammarTipFetchedRef.current = true
@@ -841,11 +854,11 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
   const grammarOverallScore = hasGrammarData ? (grammar.overall_score ?? 0) : 100
 
   const navigationItems = [
-    { id: "pronunciation" as NavigationItem, label: "Pronunciation", icon: Mic, score: Math.round(pronunciation.overall_score || 0) },
-    { id: "fluency" as NavigationItem, label: "Fluency", icon: Brain, score: Math.round(fluency.overall_score || 0) },
-    { id: "vocabulary" as NavigationItem, label: "Vocabulary", icon: BookOpen, score: Math.round(vocabulary.overall_score || 0) },
-    { id: "grammar" as NavigationItem, label: "Grammar", icon: Award, score: grammarScore },
-    { id: "phoneme-guide" as NavigationItem, label: "Phoneme Guide", icon: BookText, score: null },
+    { id: "pronunciation" as NavigationItem, label: t("speechResults.pronunciation"), icon: Mic, score: Math.round(pronunciation.overall_score || 0) },
+    { id: "fluency" as NavigationItem, label: t("speechResults.fluency"), icon: Brain, score: Math.round(fluency.overall_score || 0) },
+    { id: "vocabulary" as NavigationItem, label: t("speechResults.vocabulary"), icon: BookOpen, score: Math.round(vocabulary.overall_score || 0) },
+    { id: "grammar" as NavigationItem, label: t("speechResults.grammar"), icon: Award, score: grammarScore },
+    { id: "phoneme-guide" as NavigationItem, label: t("speechResults.phonemeGuide"), icon: BookText, score: null },
   ]
 
   const overallScore = overall.overall_score || 0
@@ -1075,7 +1088,7 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
                   className="text-xs font-medium mb-1"
                   style={{ color: "#6b7280", fontSize: "11px" }}
                 >
-                  Score
+                  {t("speechResults.score")}
                 </div>
                 <div 
                   className="text-4xl font-bold leading-none"
@@ -1095,7 +1108,7 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
               className="text-sm font-semibold mb-2"
               style={{ color: "#374151" }}
             >
-              Overall Score
+              {t("speechResults.overallScore")}
             </p>
             <div className="flex items-center justify-center gap-2 text-xs">
               <span 
@@ -1154,7 +1167,7 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
                 >
                   <Volume2 className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-xl font-bold">Pronunciation Breakdown</span>
+                <span className="text-xl font-bold">{t("speechResults.pronunciationBreakdown")}</span>
               </CardTitle>
             </CardHeader>
             <CardContent style={{ padding: "24px" }}>
@@ -1212,7 +1225,7 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
                             lineHeight: "1.5",
                           }}
                         >
-                          Your Recording
+                          {t("speechResults.yourRecording")}
                         </h4>
                         <p
                           style={{
@@ -1222,7 +1235,7 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
                             lineHeight: "1.4",
                           }}
                         >
-                          Listen to your recorded speech
+                          {t("speechResults.listenToRecording")}
                         </p>
                       </div>
                     </div>
@@ -1483,7 +1496,7 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
               </div>
 
               <div className="mb-4">
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">Phonemes:</h4>
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">{t("speechResults.phonemes")}</h4>
                 <div className="flex flex-wrap gap-2">
                   {wordScores.find((w) => w.name === selectedWord)?.phonemes?.length > 0 ? (
                     wordScores
@@ -1509,7 +1522,7 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
               </div>
 
               <div className="mt-4 p-4 bg-white rounded-lg border border-blue-200">
-                <h4 className="text-sm font-semibold text-gray-700 mb-4">Practice Pronunciation:</h4>
+                <h4 className="text-sm font-semibold text-gray-700 mb-4">{t("speechResults.practicePronunciation")}</h4>
 
                 <div className="grid grid-cols-1 md:grid-cols-[auto_1fr_auto] items-center gap-4">
                   {/* Left side: Record button */}
@@ -1693,21 +1706,21 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
                 >
                   <Brain className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-xl font-bold">Fluency & Rhythm</span>
+                <span className="text-xl font-bold">{t("speechResults.fluencyRhythm")}</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="p-4 bg-emerald-50 rounded-xl text-center border border-emerald-100">
-              <p className="text-sm text-gray-600">Speech Rate (wpm)</p>
+              <p className="text-sm text-gray-600">{t("speechResults.speechRate")}</p>
               <p className="text-2xl font-semibold text-emerald-600">{fluency.metrics?.speech_rate}</p>
             </div>
             <div className="p-4 bg-emerald-50 rounded-xl text-center border border-emerald-100">
-              <p className="text-sm text-gray-600">Pauses</p>
+              <p className="text-sm text-gray-600">{t("speechResults.pauses")}</p>
               <p className="text-2xl font-semibold text-emerald-600">{fluency.metrics?.pauses}</p>
             </div>
             <div className="p-4 bg-emerald-50 rounded-xl text-center border border-emerald-100">
-              <p className="text-sm text-gray-600">Filler Words</p>
+              <p className="text-sm text-gray-600">{t("speechResults.fillerWords")}</p>
               <p className="text-2xl font-semibold text-emerald-600">{fluency.metrics?.filler_words}</p>
             </div>
           </div>
@@ -1755,7 +1768,7 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
                 >
                   <BookOpen className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-xl font-bold">Vocabulary</span>
+                <span className="text-xl font-bold">{t("speechResults.vocabulary")}</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
@@ -1764,15 +1777,15 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
                   {vocabulary && Object.keys(vocabulary).length > 0 && (
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                       <div className="text-center bg-purple-50 border border-purple-200 rounded-xl p-4">
-                        <p className="text-sm text-gray-600">Overall</p>
+                        <p className="text-sm text-gray-600">{t("speechResults.overall")}</p>
                         <p className="text-2xl font-semibold text-purple-600">{vocabulary.overall_score ?? "-"}</p>
                       </div>
                       <div className="text-center bg-purple-50 border border-purple-200 rounded-xl p-4">
-                        <p className="text-sm text-gray-600">Complexity</p>
+                        <p className="text-sm text-gray-600">{t("speechResults.complexity")}</p>
                         <p className="text-2xl font-semibold text-purple-600">{vocabulary.metrics?.vocabulary_complexity ?? "-"}</p>
                       </div>
                       <div className="text-center bg-purple-50 border border-purple-200 rounded-xl p-4">
-                        <p className="text-sm text-gray-600">Idioms</p>
+                        <p className="text-sm text-gray-600">{t("speechResults.idioms")}</p>
                         <p className="text-2xl font-semibold text-purple-600">{vocabulary.metrics?.idiom_details?.length ?? 0}</p>
                       </div>
                       <div className="text-center bg-purple-50 border border-purple-200 rounded-xl p-4">
@@ -1784,7 +1797,7 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
                   
                   {vocabulary.feedback?.tagged_transcript && (
                     <div className="mb-6 bg-purple-50 border border-purple-200 p-4 rounded-lg">
-                      <p className="text-sm font-semibold text-purple-700 mb-2">Transcript:</p>
+                      <p className="text-sm font-semibold text-purple-700 mb-2">{t("speechResults.transcript")}</p>
                       <p className="text-sm text-gray-700">{vocabulary.feedback.tagged_transcript}</p>
                     </div>
                   )}
@@ -1792,12 +1805,12 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
                   <div className="mb-6">
                     <div className="flex items-center gap-2 mb-3">
                       <div className="h-8 w-1 rounded-full bg-purple-500" />
-                      <h3 className="text-base font-bold text-purple-800">Synonyms</h3>
+                      <h3 className="text-base font-bold text-purple-800">{t("speechResults.synonyms")}</h3>
                     </div>
                     {loadingVocabularySynonyms && (
                       <div className="flex items-center gap-2 text-sm text-gray-500 py-4">
                         <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-purple-500 border-t-transparent" />
-                        Loading…
+                        {t("speechResults.loading")}
                       </div>
                     )}
                     {vocabularySynonyms && !loadingVocabularySynonyms && (
@@ -1830,28 +1843,28 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
                       </div>
                     )}
                     {!vocabularySynonyms && !loadingVocabularySynonyms && (metadata?.predicted_text || pronunciation?.words?.length) && (
-                      <p className="text-sm text-gray-500 py-4">Synonyms will load when you open this tab.</p>
+                      <p className="text-sm text-gray-500 py-4">{t("speechResults.synonymsLoadHint")}</p>
                     )}
                   </div>
 
                   {reading && Object.keys(reading).length > 0 && (
                     <div className={vocabulary && Object.keys(vocabulary).length > 0 ? "mt-6" : ""}>
-                      <h4 className="text-lg font-semibold text-purple-700 mb-4">Reading Metrics</h4>
+                      <h4 className="text-lg font-semibold text-purple-700 mb-4">{t("speechResults.readingMetrics")}</h4>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="text-center bg-purple-50 border border-purple-200 rounded-xl p-4">
-                          <p className="text-sm text-gray-600">Accuracy</p>
+                          <p className="text-sm text-gray-600">{t("speechResults.accuracy")}</p>
                           <p className="text-2xl font-semibold text-purple-600">{Number.isFinite(reading.accuracy) ? (reading.accuracy * 100).toFixed(0) : "-"}%</p>
                         </div>
                         <div className="text-center bg-purple-50 border border-purple-200 rounded-xl p-4">
-                          <p className="text-sm text-gray-600">Completion</p>
+                          <p className="text-sm text-gray-600">{t("speechResults.completion")}</p>
                           <p className="text-2xl font-semibold text-purple-600">{Number.isFinite(reading.completion || reading.completions) ? ((reading.completion || reading.completions) * 100).toFixed(0) : "-"}%</p>
                         </div>
                         <div className="text-center bg-purple-50 border border-purple-200 rounded-xl p-4">
-                          <p className="text-sm text-gray-600">Speed (WPM)</p>
+                          <p className="text-sm text-gray-600">{t("speechResults.speedWpm")}</p>
                           <p className="text-2xl font-semibold text-purple-600">{Number.isFinite(reading.speed_wpm || reading.speed_wpm_correct) ? (reading.speed_wpm || reading.speed_wpm_correct).toFixed(1) : "-"}</p>
                         </div>
                         <div className="text-center bg-purple-50 border border-purple-200 rounded-xl p-4">
-                          <p className="text-sm text-gray-600">Words Read</p>
+                          <p className="text-sm text-gray-600">{t("speechResults.wordsRead")}</p>
                           <p className="text-2xl font-semibold text-purple-600">{reading.words_read ?? "-"}</p>
                         </div>
                       </div>
@@ -1859,7 +1872,7 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
                   )}
                 </>
               ) : (
-                <p className="text-sm text-gray-600">No vocabulary or reading metrics available.</p>
+                <p className="text-sm text-gray-600">{t("speechResults.noVocabularyMetrics")}</p>
               )}
             </CardContent>
           </Card>
@@ -1894,21 +1907,21 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
                 >
                   <Award className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-xl font-bold">Grammar</span>
+                <span className="text-xl font-bold">{t("speechResults.grammar")}</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-6">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center bg-emerald-50 border border-emerald-200 rounded-xl p-4">
-                  <p className="text-sm text-gray-600">Overall</p>
+                  <p className="text-sm text-gray-600">{t("speechResults.overall")}</p>
                   <p className="text-2xl font-semibold text-emerald-600">{grammarOverallScore}</p>
                 </div>
                 <div className="text-center bg-emerald-50 border border-emerald-200 rounded-xl p-4">
-                  <p className="text-sm text-gray-600">Mistakes</p>
+                  <p className="text-sm text-gray-600">{t("speechResults.mistakes")}</p>
                   <p className="text-2xl font-semibold text-emerald-600">{grammar.metrics?.mistake_count ?? 0}</p>
                 </div>
                 <div className="text-center bg-emerald-50 border border-emerald-200 rounded-xl p-4">
-                  <p className="text-sm text-gray-600">Complexity</p>
+                  <p className="text-sm text-gray-600">{t("speechResults.complexity")}</p>
                   <p className="text-2xl font-semibold text-emerald-600">{grammar.metrics?.grammatical_complexity ?? "-"}</p>
                 </div>
                 <div className="text-center bg-emerald-50 border border-emerald-200 rounded-xl p-4">
@@ -1920,26 +1933,26 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
               {/* Original text + tone dropdown + improved text (no Corrected Text) */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <p className="text-sm font-semibold text-gray-700 mb-2">Original Recorded Text</p>
+                  <p className="text-sm font-semibold text-gray-700 mb-2">{t("speechResults.originalRecordedText")}</p>
                   <div className="text-sm text-gray-700 bg-gray-50 p-4 rounded-lg border border-gray-200 min-h-[120px]">
                     {(metadata?.predicted_text || "").trim() || "—"}
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
-                  <p className="text-sm font-semibold text-gray-700">Select an option:</p>
+                  <p className="text-sm font-semibold text-gray-700">{t("speechResults.selectOption")}</p>
                   <select
                     value={grammarToneOption}
                     onChange={(e) => setGrammarToneOption(e.target.value)}
                     className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:border-emerald-500 focus:outline-none"
                   >
-                    <option value="">Choose tone...</option>
-                    <option value="Casual">Casual</option>
-                    <option value="Grammar">Grammar</option>
-                    <option value="Passionate">Passionate</option>
-                    <option value="Formal">Formal</option>
-                    <option value="Business">Business</option>
-                    <option value="Funny">Funny</option>
-                    <option value="Custom">Custom</option>
+                    <option value="">{t("speechResults.chooseTone")}</option>
+                    <option value="Casual">{t("speechResults.toneCasual")}</option>
+                    <option value="Grammar">{t("speechResults.toneGrammar")}</option>
+                    <option value="Passionate">{t("speechResults.tonePassionate")}</option>
+                    <option value="Formal">{t("speechResults.toneFormal")}</option>
+                    <option value="Business">{t("speechResults.toneBusiness")}</option>
+                    <option value="Funny">{t("speechResults.toneFunny")}</option>
+                    <option value="Custom">{t("speechResults.toneCustom")}</option>
                   </select>
                   <button
                     type="button"
@@ -1947,7 +1960,7 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
                     disabled={!grammarToneOption || !(metadata?.predicted_text || "").trim() || improvingTone}
                     className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {improvingTone ? "Improving…" : "Improve"}
+                    {improvingTone ? t("speechResults.improving") : t("speechResults.improve")}
                   </button>
                   {improvedText && (
                     <button
@@ -1955,21 +1968,21 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
                       onClick={() => navigator.clipboard.writeText(improvedText)}
                       className="rounded-lg border border-emerald-300 bg-white px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50"
                     >
-                      Copy
+                      {t("speechResults.copy")}
                     </button>
                   )}
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-gray-700 mb-2">Improved Speech Text</p>
+                  <p className="text-sm font-semibold text-gray-700 mb-2">{t("speechResults.improvedSpeechText")}</p>
                   <div className="text-sm text-gray-700 bg-emerald-50 p-4 rounded-lg border border-emerald-200 min-h-[120px]">
-                    {improvingTone ? "Loading…" : (improvedText || "—")}
+                    {improvingTone ? t("speechResults.loading") : (improvedText || "—")}
                   </div>
                 </div>
               </div>
 
               {/* Grammar tip — auto-fetched when tab opens; fallback button to retry */}
               <div className="bg-white border border-emerald-200 p-4 rounded-lg">
-                <p className="text-sm font-semibold text-gray-700 mb-2">Grammar tip</p>
+                <p className="text-sm font-semibold text-gray-700 mb-2">{t("speechResults.grammarTip")}</p>
                 {grammar.feedback?.grammar_feedback && !grammarTip && !loadingGrammarTip && (
                   <div className="text-sm text-gray-700 space-y-2">
                     {(grammar.feedback.grammar_feedback as string).replace(/\*\*/g, "").split(/\n+/).filter(Boolean).map((p, i) => (
@@ -1984,14 +1997,14 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
                     ))}
                   </div>
                 )}
-                {loadingGrammarTip && <p className="text-sm text-gray-500">Loading tips…</p>}
+                {loadingGrammarTip && <p className="text-sm text-gray-500">{t("speechResults.loadingTips")}</p>}
                 {!grammar.feedback?.grammar_feedback && !grammarTip && !loadingGrammarTip && (metadata?.predicted_text || "").trim() && (
                   <button
                     type="button"
                     onClick={fetchGrammarTip}
                     className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
                   >
-                    Get grammar tips
+                    {t("speechResults.getGrammarTips")}
                   </button>
                 )}
               </div>
@@ -1999,7 +2012,7 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
               {/* Grammar errors list (no Corrected Text) */}
               {((grammar.metrics?.grammar_errors || []).length > 0 || (grammar.feedback?.grammar_errors || []).length > 0) && (
                 <div className="bg-white border border-emerald-200 p-4 rounded-lg">
-                  <p className="text-sm font-semibold text-gray-700 mb-2">Grammar Errors:</p>
+                  <p className="text-sm font-semibold text-gray-700 mb-2">{t("speechResults.grammarErrors")}</p>
                   <ul className="list-disc pl-6 text-sm text-gray-700 space-y-2">
                     {[...(grammar.metrics?.grammar_errors || []), ...(grammar.feedback?.grammar_errors || [])].map((err: any, i: number) => {
                       if (typeof err === "string") {
@@ -2056,7 +2069,7 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
                 >
                   <BookText className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-xl font-bold">Phoneme Guide</span>
+                <span className="text-xl font-bold">{t("speechResults.phonemeGuide")}</span>
               </CardTitle>
             </CardHeader>
             <CardContent style={{ padding: "24px" }}>
@@ -2124,7 +2137,7 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
                 >
                   <AlertTriangle className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-xl font-bold">Additional Information</span>
+                <span className="text-xl font-bold">{t("speechResults.additionalInfo")}</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-3 text-sm text-gray-800">
@@ -2136,12 +2149,12 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
               ))}
               {metadata.predicted_text && (
                 <div>
-                  <strong>Predicted Text:</strong> {metadata.predicted_text}
+                  <strong>{t("speechResults.predictedText")}</strong> {metadata.predicted_text}
                 </div>
               )}
               {metadata.content_relevance && (
                 <div>
-                  <strong>Content Relevance:</strong> {metadata.content_relevance}%
+                  <strong>{t("speechResults.contentRelevance")}</strong> {metadata.content_relevance}%
                 </div>
               )}
             </CardContent>
