@@ -1,6 +1,7 @@
 "use client"
 
-import { useNavigate, useLocation, useParams } from "react-router-dom"
+import { useLocation, useParams } from "react-router-dom"
+import { useLocalizedNavigate } from "./LocaleLayout"
 import { Button } from "./ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { ArrowLeft, BookMarked } from "lucide-react"
@@ -75,7 +76,7 @@ True friends are like stars - you don't always see them, but you know they're al
 }
 
 export function StoryDetail() {
-  const navigate = useNavigate()
+  const navigate = useLocalizedNavigate()
   const location = useLocation()
   const { storyId } = useParams<{ storyId: string }>()
   const backRoute = (location.state as any)?.backRoute || "/stories"

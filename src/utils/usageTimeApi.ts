@@ -64,7 +64,7 @@ export async function fetchUsageTime(token: string): Promise<number | null> {
     // Update the last call timestamp
     lastUsageTimeCall = Date.now();
     
-    const response = await fetch('https://api.exeleratetechnology.com/api/analytics/usage-time.php', {
+    const response = await fetch('https://api.intelliviq.com/api/analytics/usage-time.php', {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,

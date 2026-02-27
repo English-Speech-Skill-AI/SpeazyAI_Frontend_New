@@ -1,6 +1,7 @@
 "use client"
 
-import { useNavigate, useLocation } from "react-router-dom"
+import { useLocation } from "react-router-dom"
+import { useLocalizedNavigate } from "./LocaleLayout"
 import { Button } from "./ui/button"
 import { ArrowLeft } from "lucide-react"
 import { ReadingAssessmentResults } from "./ReadingAssessmentResults"
@@ -10,7 +11,7 @@ import { useAuth } from "../contexts/AuthContext"
 import { useEffect, useRef } from "react"
 
 export function ReadingAssessmentResultsPage() {
-  const navigate = useNavigate()
+  const navigate = useLocalizedNavigate()
   const location = useLocation()
   const { token, authData } = useAuth()
   const hasSavedRef = useRef(false)
@@ -173,7 +174,7 @@ export function ReadingAssessmentResultsPage() {
         console.log("Saving result to database with payload:", JSON.stringify(payload, null, 2))
 
         // Use the reading API endpoint as specified by the user
-        const response = await fetch("https://api.exeleratetechnology.com/api/reading/save-result.php", {
+        const response = await fetch("https://api.intelliviq.com/api/reading/save-result.php", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

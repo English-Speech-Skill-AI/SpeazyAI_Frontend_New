@@ -148,7 +148,7 @@ export function IELTSSpeakingResults() {
         // Save single JSON with all parts
         try {
           const response = await fetch(
-            'https://api.exeleratetechnology.com/api/ielts/speaking/save-result.php',
+            'https://api.intelliviq.com/api/ielts/speaking/save-result.php',
             {
               method: 'POST',
               headers: {
@@ -164,7 +164,7 @@ export function IELTSSpeakingResults() {
             const newToken = await refreshToken();
             if (newToken) {
               const retryResponse = await fetch(
-                'https://api.exeleratetechnology.com/api/ielts/speaking/save-result.php',
+                'https://api.intelliviq.com/api/ielts/speaking/save-result.php',
                 {
                   method: 'POST',
                   headers: {

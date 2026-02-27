@@ -96,7 +96,7 @@ export function ContactPage() {
               {
                 icon: Mail,
                 title: "Email Us",
-                info: "support@speechskills.ai",
+                info: "support@englishskills.ai",
                 color: "from-[#3B82F6] to-[#00B9FC]",
               },
               {

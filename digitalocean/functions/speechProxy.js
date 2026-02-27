@@ -85,12 +85,21 @@ export async function main(event) {
     }
 
     // Endpoint can be in query (URL), in body, or at top-level event (DO may merge params)
-    const targetEndpoint =
+    let targetEndpoint =
       query.endpoint ||
       body.endpoint ||
       event.endpoint ||
       "https://apis.languageconfidence.ai/speech-assessment/unscripted/uk";
-    const isScripted = typeof targetEndpoint === "string" && targetEndpoint.includes("speech-assessment/scripted");
+    let isScripted = typeof targetEndpoint === "string" && targetEndpoint.includes("speech-assessment/scripted");
+
+    // Rule: only switch from scripted -> unscripted when expected_text is > 300 chars
+    if (isScripted && expectedText != null) {
+      const textForLength = String(expectedText).trim();
+      if (textForLength.length > 300) {
+        targetEndpoint = targetEndpoint.replace("/scripted/", "/unscripted/");
+        isScripted = false;
+      }
+    }
 
     // Scripted: use the field name the API accepts (LC scripted/uk = "expected_text"; set LC_SCRIPT_FIELD to override)
     const scriptedTextField = process.env.LC_SCRIPT_FIELD || "expected_text";

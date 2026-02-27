@@ -35,7 +35,8 @@ import {
   Trash2,
 } from "lucide-react"
 import { AudioRecorder } from "./audioRecorder"
-import { useNavigate, useLocation } from "react-router-dom"
+import { useLocation } from "react-router-dom"
+import { useLocalizedNavigate } from "./LocaleLayout"
 import { useAuth } from "../contexts/AuthContext"
 import { toast } from "sonner"
 import { PdfLoadingScreen } from "./PdfLoadingScreen"
@@ -108,7 +109,7 @@ const getItemGradient = (itemId: string) => {
 }
 
 export function MyLessons() {
-  const navigate = useNavigate()
+  const navigate = useLocalizedNavigate()
   const location = useLocation()
   const backRoute = (location.state as any)?.backRoute || "/reading-modules"
   const { token, userRole } = useAuth()
@@ -150,7 +151,7 @@ export function MyLessons() {
 
       try {
         setIsLoadingContent(true)
-        const response = await fetch("https://api.exeleratetechnology.com/api/content/list.php", {
+        const response = await fetch("https://api.intelliviq.com/api/content/list.php", {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -194,7 +195,7 @@ export function MyLessons() {
         toast.error("Invalid lesson id.")
         return
       }
-      const response = await fetch("https://api.exeleratetechnology.com/api/content/delete.php", {
+      const response = await fetch("https://api.intelliviq.com/api/content/delete.php", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

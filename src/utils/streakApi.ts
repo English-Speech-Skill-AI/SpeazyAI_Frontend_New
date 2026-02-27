@@ -16,7 +16,7 @@ export interface StreakData {
  */
 export async function fetchStreakData(token: string): Promise<StreakData | null> {
   try {
-    const response = await fetch('https://api.exeleratetechnology.com/api/analytics/my-streak.php', {
+    const response = await fetch('https://api.intelliviq.com/api/analytics/my-streak.php', {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
