@@ -1,5 +1,17 @@
 import { useEffect } from "react"
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
+
+function RootRedirect() {
+  const stored = (() => {
+    try {
+      const v = localStorage.getItem("speech-skills-locale")
+      return v === "ar" ? "/ar" : "/en"
+    } catch {
+      return "/en"
+    }
+  })()
+  return <Navigate to={stored} replace />
+}
 import { HomePage } from "./components/HomePage"
 import { AboutPage } from "./components/AboutPage"
 import { ContactPage } from "./components/ContactPage"
@@ -26,6 +38,7 @@ import { IELTSSpeakingTaskView } from "./components/ielts/IELTSSpeakingTaskView"
 import { IELTSSpeakingResults } from "./components/ielts/IELTSSpeakingResults"
 import { Profile } from "./components/Profile"
 import { ThemeProvider } from "./components/ThemeProvider"
+import { LocaleLayout, LocalizedNavigate } from "./components/LocaleLayout"
 import { ContentLibrary } from "./components/ContentLibrary"
 import { QuickPractice } from "./components/QuickPractice"
 import { WritingPractice } from "./components/WritingPractice"
@@ -71,69 +84,72 @@ export default function App() {
         <BrowserRouter>
           <div className="size-full">
             <Routes>
+            <Route path="/" element={<RootRedirect />} />
+            <Route path="/:locale" element={<LocaleLayout />}>
             {/* Public Routes */}
-            <Route path="/" element={<HomePage />} />
-            <Route path="/about" element={<AboutPage />} />
-            <Route path="/contact" element={<ContactPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/signup" element={<SignUpPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route index element={<HomePage />} />
+            <Route path="about" element={<AboutPage />} />
+            <Route path="contact" element={<ContactPage />} />
+            <Route path="login" element={<LoginPage />} />
+            <Route path="signup" element={<SignUpPage />} />
+            <Route path="forgot-password" element={<ForgotPasswordPage />} />
             
             {/* Protected Routes */}
-            <Route path="/quick-practice" element={<ProtectedRoute><QuickPractice /></ProtectedRoute>} />
-            <Route path="/application" element={<Navigate to="/login" replace />} />
-            <Route path="/famous-speeches" element={<ProtectedRoute><FamousSpeeches /></ProtectedRoute>} />
-            <Route path="/famous-speeches/results" element={<ProtectedRoute><SpeechAssessmentResultsPage /></ProtectedRoute>} />
-            <Route path="/academic-samples" element={<ProtectedRoute><AcademicSamples /></ProtectedRoute>} />
-            <Route path="/academic-samples/chapter/:chapterId" element={<ProtectedRoute><ChapterView /></ProtectedRoute>} />
-            <Route path="/academic-samples/results" element={<ProtectedRoute><SpeechAssessmentResultsPage /></ProtectedRoute>} />
-            <Route path="/custom-content/results" element={<ProtectedRoute><SpeechAssessmentResultsPage /></ProtectedRoute>} />
-            <Route path="/my-lessons/results" element={<ProtectedRoute><SpeechAssessmentResultsPage /></ProtectedRoute>} />
-            <Route path="/my-lessons" element={<ProtectedRoute><MyLessons /></ProtectedRoute>} />
-            <Route path="/custom-content" element={<ProtectedRoute><CustomContent /></ProtectedRoute>} />
-            <Route path="/chat" element={<ProtectedRoute><ChatWithAI /></ProtectedRoute>} />
-            <Route path="/chat/conversation" element={<ProtectedRoute><SpeechChatPage /></ProtectedRoute>} />
-            <Route path="/ielts" element={<ProtectedRoute><IELTSModule /></ProtectedRoute>} />
-            <Route path="/ielts/reading" element={<ProtectedRoute><IELTSReadingPage /></ProtectedRoute>} />
-            <Route path="/ielts/writing" element={<ProtectedRoute><IELTSWritingPage /></ProtectedRoute>} />
-            <Route path="/ielts/writing/:contentId" element={<ProtectedRoute><IELTSWritingTaskView /></ProtectedRoute>} />
-            <Route path="/ielts/writing/:contentId/results" element={<ProtectedRoute><IELTSWritingResults /></ProtectedRoute>} />
-            <Route path="/ielts/listening" element={<ProtectedRoute><IELTSListeningPage /></ProtectedRoute>} />
-            <Route path="/ielts/listening/:contentId" element={<ProtectedRoute><IELTSListeningTaskView /></ProtectedRoute>} />
-            <Route path="/ielts/listening/:contentId/results" element={<ProtectedRoute><IELTSListeningResults /></ProtectedRoute>} />
-            <Route path="/ielts/speaking" element={<ProtectedRoute><IELTSSpeakingPage /></ProtectedRoute>} />
-            <Route path="/ielts/speaking/:contentId" element={<ProtectedRoute><IELTSSpeakingTaskView /></ProtectedRoute>} />
-            <Route path="/ielts/speaking/:contentId/results" element={<ProtectedRoute><IELTSSpeakingResults /></ProtectedRoute>} />
-            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-            <Route path="/content-library" element={<ProtectedRoute><ContentLibrary /></ProtectedRoute>} />
-            <Route path="/writing-practice" element={<ProtectedRoute><WritingPractice /></ProtectedRoute>} />
-            <Route path="/listening-practice" element={<ProtectedRoute><ListeningPractice /></ProtectedRoute>} />
-            <Route path="/casual-conversations" element={<ProtectedRoute><CasualConversations /></ProtectedRoute>} />
-            <Route path="/official-conversations" element={<ProtectedRoute><OfficialConversations /></ProtectedRoute>} />
-            <Route path="/formal-conversations" element={<ProtectedRoute><FormalConversations /></ProtectedRoute>} />
-            <Route path="/connect-teacher" element={<ProtectedRoute><Connectteacher /></ProtectedRoute>} />
-            <Route path="/progress-dashboard" element={<ProtectedRoute><EduDashboard /></ProtectedRoute>} />
-            <Route path="/progress-dashboard/classes" element={<ProtectedRoute><ClassManagement /></ProtectedRoute>} />
-            <Route path="/progress-dashboard/students/:userId?" element={<ProtectedRoute><StudentDetailsPage /></ProtectedRoute>} />
-            <Route path="/progress-dashboard/license" element={<ProtectedRoute><LicenseManagement /></ProtectedRoute>} />
-            <Route path="/skills-home" element={<ProtectedRoute><NewDashboard /></ProtectedRoute>} />
-            <Route path="/skills/:skillId" element={<ProtectedRoute><SkillDetail /></ProtectedRoute>} />
-            <Route path="/reading-page" element={<ProtectedRoute><ReadingPage /></ProtectedRoute>} />
-            <Route path="/reading-modules" element={<ProtectedRoute><ReadingModulesPage /></ProtectedRoute>} />
-            <Route path="/speaking-modules" element={<ProtectedRoute><SpeakingModulesPage /></ProtectedRoute>} />
-            <Route path="/writing-modules" element={<ProtectedRoute><WritingModulesPage /></ProtectedRoute>} />
-            <Route path="/listening-modules" element={<ProtectedRoute><ListeningModulesPage /></ProtectedRoute>} />
-            <Route path="/stories" element={<ProtectedRoute><Stories /></ProtectedRoute>} />
-            <Route path="/story/:storyId" element={<ProtectedRoute><StoryDetail /></ProtectedRoute>} />
-            <Route path="/stories/results" element={<ProtectedRoute><ReadingAssessmentResultsPage /></ProtectedRoute>} />
-            <Route path="/novel" element={<ProtectedRoute><Novel /></ProtectedRoute>} />
-            <Route path="/novel/:novelId" element={<ProtectedRoute><NovelDetail /></ProtectedRoute>} />
-            <Route path="/novels/results" element={<ProtectedRoute><ReadingAssessmentResultsPage /></ProtectedRoute>} />
-            <Route path="/phoneme-guide" element={<ProtectedRoute><PhonemeGuide /></ProtectedRoute>} />
-            <Route path="/sample-videos" element={<ProtectedRoute><VideoContent /></ProtectedRoute>} />
+            <Route path="quick-practice" element={<ProtectedRoute><QuickPractice /></ProtectedRoute>} />
+            <Route path="application" element={<LocalizedNavigate to="/login" replace />} />
+            <Route path="famous-speeches" element={<ProtectedRoute><FamousSpeeches /></ProtectedRoute>} />
+            <Route path="famous-speeches/results" element={<ProtectedRoute><SpeechAssessmentResultsPage /></ProtectedRoute>} />
+            <Route path="academic-samples" element={<ProtectedRoute><AcademicSamples /></ProtectedRoute>} />
+            <Route path="academic-samples/chapter/:chapterId" element={<ProtectedRoute><ChapterView /></ProtectedRoute>} />
+            <Route path="academic-samples/results" element={<ProtectedRoute><SpeechAssessmentResultsPage /></ProtectedRoute>} />
+            <Route path="custom-content/results" element={<ProtectedRoute><SpeechAssessmentResultsPage /></ProtectedRoute>} />
+            <Route path="my-lessons/results" element={<ProtectedRoute><SpeechAssessmentResultsPage /></ProtectedRoute>} />
+            <Route path="my-lessons" element={<ProtectedRoute><MyLessons /></ProtectedRoute>} />
+            <Route path="custom-content" element={<ProtectedRoute><CustomContent /></ProtectedRoute>} />
+            <Route path="chat" element={<ProtectedRoute><ChatWithAI /></ProtectedRoute>} />
+            <Route path="chat/conversation" element={<ProtectedRoute><SpeechChatPage /></ProtectedRoute>} />
+            <Route path="ielts" element={<ProtectedRoute><IELTSModule /></ProtectedRoute>} />
+            <Route path="ielts/reading" element={<ProtectedRoute><IELTSReadingPage /></ProtectedRoute>} />
+            <Route path="ielts/writing" element={<ProtectedRoute><IELTSWritingPage /></ProtectedRoute>} />
+            <Route path="ielts/writing/:contentId" element={<ProtectedRoute><IELTSWritingTaskView /></ProtectedRoute>} />
+            <Route path="ielts/writing/:contentId/results" element={<ProtectedRoute><IELTSWritingResults /></ProtectedRoute>} />
+            <Route path="ielts/listening" element={<ProtectedRoute><IELTSListeningPage /></ProtectedRoute>} />
+            <Route path="ielts/listening/:contentId" element={<ProtectedRoute><IELTSListeningTaskView /></ProtectedRoute>} />
+            <Route path="ielts/listening/:contentId/results" element={<ProtectedRoute><IELTSListeningResults /></ProtectedRoute>} />
+            <Route path="ielts/speaking" element={<ProtectedRoute><IELTSSpeakingPage /></ProtectedRoute>} />
+            <Route path="ielts/speaking/:contentId" element={<ProtectedRoute><IELTSSpeakingTaskView /></ProtectedRoute>} />
+            <Route path="ielts/speaking/:contentId/results" element={<ProtectedRoute><IELTSSpeakingResults /></ProtectedRoute>} />
+            <Route path="profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="content-library" element={<ProtectedRoute><ContentLibrary /></ProtectedRoute>} />
+            <Route path="writing-practice" element={<ProtectedRoute><WritingPractice /></ProtectedRoute>} />
+            <Route path="listening-practice" element={<ProtectedRoute><ListeningPractice /></ProtectedRoute>} />
+            <Route path="casual-conversations" element={<ProtectedRoute><CasualConversations /></ProtectedRoute>} />
+            <Route path="official-conversations" element={<ProtectedRoute><OfficialConversations /></ProtectedRoute>} />
+            <Route path="formal-conversations" element={<ProtectedRoute><FormalConversations /></ProtectedRoute>} />
+            <Route path="connect-teacher" element={<ProtectedRoute><Connectteacher /></ProtectedRoute>} />
+            <Route path="progress-dashboard" element={<ProtectedRoute><EduDashboard /></ProtectedRoute>} />
+            <Route path="progress-dashboard/classes" element={<ProtectedRoute><ClassManagement /></ProtectedRoute>} />
+            <Route path="progress-dashboard/students/:userId?" element={<ProtectedRoute><StudentDetailsPage /></ProtectedRoute>} />
+            <Route path="progress-dashboard/license" element={<ProtectedRoute><LicenseManagement /></ProtectedRoute>} />
+            <Route path="skills-home" element={<ProtectedRoute><NewDashboard /></ProtectedRoute>} />
+            <Route path="skills/:skillId" element={<ProtectedRoute><SkillDetail /></ProtectedRoute>} />
+            <Route path="reading-page" element={<ProtectedRoute><ReadingPage /></ProtectedRoute>} />
+            <Route path="reading-modules" element={<ProtectedRoute><ReadingModulesPage /></ProtectedRoute>} />
+            <Route path="speaking-modules" element={<ProtectedRoute><SpeakingModulesPage /></ProtectedRoute>} />
+            <Route path="writing-modules" element={<ProtectedRoute><WritingModulesPage /></ProtectedRoute>} />
+            <Route path="listening-modules" element={<ProtectedRoute><ListeningModulesPage /></ProtectedRoute>} />
+            <Route path="stories" element={<ProtectedRoute><Stories /></ProtectedRoute>} />
+            <Route path="story/:storyId" element={<ProtectedRoute><StoryDetail /></ProtectedRoute>} />
+            <Route path="stories/results" element={<ProtectedRoute><ReadingAssessmentResultsPage /></ProtectedRoute>} />
+            <Route path="novel" element={<ProtectedRoute><Novel /></ProtectedRoute>} />
+            <Route path="novel/:novelId" element={<ProtectedRoute><NovelDetail /></ProtectedRoute>} />
+            <Route path="novels/results" element={<ProtectedRoute><ReadingAssessmentResultsPage /></ProtectedRoute>} />
+            <Route path="phoneme-guide" element={<ProtectedRoute><PhonemeGuide /></ProtectedRoute>} />
+            <Route path="sample-videos" element={<ProtectedRoute><VideoContent /></ProtectedRoute>} />
             
             {/* Catch all - redirect to login */}
-            <Route path="*" element={<Navigate to="/login" replace />} />
+            <Route path="*" element={<LocalizedNavigate to="/login" replace />} />
+            </Route>
           </Routes>
         </div>
       </BrowserRouter>

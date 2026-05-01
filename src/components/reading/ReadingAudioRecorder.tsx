@@ -267,9 +267,9 @@ export function ReadingAudioRecorder({
       if (errorMessage.includes("Failed to fetch") || errorMessage.includes("NetworkError")) {
         const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
         if (isLocal) {
-          alert("Network error: Could not connect to the proxy server at localhost:4000.\n\nPlease make sure the proxy server is running:\n1. Open a terminal\n2. Run: node speechProxyServer.js\n3. Then try recording again.")
+          alert("Network error: Could not connect to the proxy server at localhost:4000.\n\nPlease make sure the proxy server is running:\n1. Open a terminal\n2. Run: npm run proxy:speech\n3. Then try recording again.")
         } else {
-          alert("Network error: Could not connect to the server.\n\nPlease check:\n1. Your internet connection\n2. The DigitalOcean function may not be available\n3. Try refreshing the page and recording again")
+          alert("Network error: Could not connect to the server.\n\nPlease check:\n1. Your internet connection\n2. The speech assessment service may be temporarily unavailable\n3. Try refreshing the page and recording again")
         }
       } else if (errorMessage.includes("404")) {
         alert("Service not found (404). The proxy endpoint may not be available. Please contact support if this issue persists.")

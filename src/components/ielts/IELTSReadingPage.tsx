@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { ScrollArea } from '../ui/scroll-area';
 import { useAuth } from '../../contexts/AuthContext';
 import { ArrowLeft, BookOpen, Loader2, AlertCircle, CheckCircle2, Sparkles, LogOut, Trophy } from 'lucide-react';
+import { useLocalizedNavigate } from '../LocaleLayout';
 
 interface ReadingItem {
   id: number;
@@ -56,7 +57,8 @@ interface ScoreResult {
 }
 
 export function IELTSReadingPage() {
-  const navigate = useNavigate();
+  const { t } = useTranslation();
+  const navigate = useLocalizedNavigate();
   const { token, logout } = useAuth();
   const [items, setItems] = useState<ReadingItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,7 +74,7 @@ export function IELTSReadingPage() {
   useEffect(() => {
     const fetchReadingItems = async () => {
       if (!token) {
-        setError('Authentication required. Please log in.');
+        setError(t('modules.ielts.authRequired'));
         setLoading(false);
         return;
       }
@@ -82,7 +84,7 @@ export function IELTSReadingPage() {
         setError(null);
 
         const response = await fetch(
-          'https://api.exeleratetechnology.com/api/ielts/reading/content/list.php',
+          'https://api.intelliviq.com/api/ielts/reading/content/list.php',
           {
             method: 'GET',
             headers: {
@@ -105,7 +107,7 @@ export function IELTSReadingPage() {
         }
       } catch (err: any) {
         console.error('Error fetching reading content:', err);
-        setError(err.message || 'Failed to load reading content. Please try again.');
+        setError(err.message || t('modules.ielts.loadFailed'));
         setItems([]);
       } finally {
         setLoading(false);
@@ -113,7 +115,7 @@ export function IELTSReadingPage() {
     };
 
     fetchReadingItems();
-  }, [token]);
+  }, [token, t]);
 
   // Fetch content from JSON URL when item is selected
   useEffect(() => {
@@ -237,7 +239,7 @@ export function IELTSReadingPage() {
         console.log('Saving result with data:', requestBody);
 
         const response = await fetch(
-          'https://api.exeleratetechnology.com/api/ielts/reading/save-result.php',
+          'https://api.intelliviq.com/api/ielts/reading/save-result.php',
           {
             method: 'POST',
             headers: {
@@ -388,7 +390,7 @@ export function IELTSReadingPage() {
                 }}
               >
                 <ArrowLeft style={{ width: '16px', height: '16px', marginRight: '8px', display: 'inline-block' }} />
-                Back
+                {t('modules.back')}
               </Button>
               
               <h1 style={{
@@ -442,7 +444,7 @@ export function IELTSReadingPage() {
                     margin: '0 auto 24px',
                   }} />
                   <p style={{ color: '#6b7280', fontSize: '18px' }}>
-                    Loading reading content...
+                    {t('modules.ielts.loadingReading')}
                   </p>
                 </CardContent>
               </Card>
@@ -898,13 +900,13 @@ export function IELTSReadingPage() {
                               marginTop: '24px',
                             }}>
                               <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '8px', fontWeight: '500' }}>
-                                IELTS Band Score
+                                {t('modules.ielts.ieltsBandScore')}
                               </p>
                               <p style={{ color: '#166534', fontSize: '48px', fontWeight: 'bold' }}>
                                 {scoreResult.ieltsScore.toFixed(1)}
                               </p>
                               <p style={{ color: '#15803d', fontSize: '14px', fontWeight: '400', marginTop: '8px' }}>
-                                {scoreResult.ieltsScore >= 7.0 ? 'Excellent!' : scoreResult.ieltsScore >= 6.0 ? 'Good work!' : 'Keep practicing!'}
+                                {scoreResult.ieltsScore >= 7.0 ? t('modules.ielts.excellent') : scoreResult.ieltsScore >= 6.0 ? t('modules.ielts.goodWork') : t('modules.ielts.keepPracticing')}
                               </p>
                             </div>
                           </CardContent>
@@ -932,10 +934,10 @@ export function IELTSReadingPage() {
                         color: '#854d0e',
                         marginBottom: '8px',
                       }}>
-                        No Content Available
+                        {t('modules.ielts.noContentAvailable')}
                       </h3>
                       <p style={{ color: '#a16207' }}>
-                        This reading passage does not have any content yet.
+                        {t('modules.ielts.noContentYet')}
                       </p>
                     </CardContent>
                   </Card>
@@ -959,10 +961,10 @@ export function IELTSReadingPage() {
                     color: '#991b1b',
                     marginBottom: '8px',
                   }}>
-                    Failed to Load Content
+                    {t('modules.ielts.failedToLoad')}
                   </h3>
                   <p style={{ color: '#b91c1c', marginBottom: '24px' }}>
-                    Unable to load the reading content. Please try again.
+                    {t('modules.ielts.unableToLoad')}
                   </p>
                   <Button
                     onClick={handleBack}
@@ -975,7 +977,7 @@ export function IELTSReadingPage() {
                       cursor: 'pointer',
                     }}
                   >
-                    Go Back
+                    {t('modules.ielts.goBack')}
                   </Button>
                 </CardContent>
               </Card>
@@ -1056,7 +1058,7 @@ export function IELTSReadingPage() {
               }}
             >
               <ArrowLeft style={{ width: '16px', height: '16px', marginRight: '8px', display: 'inline-block' }} />
-              IELTS Menu
+              {t('modules.ielts.backToIelts')}
             </Button>
             
             <h1 style={{
@@ -1115,7 +1117,7 @@ export function IELTSReadingPage() {
                 marginBottom: '24px',
               }} />
               <p style={{ color: '#d1d5db', fontSize: '18px' }}>
-                Loading reading content...
+                {t('modules.ielts.loadingReading')}
               </p>
             </div>
           ) : error ? (
@@ -1133,7 +1135,7 @@ export function IELTSReadingPage() {
                   color: '#1f2937',
                   marginBottom: '12px',
                 }}>
-                  Error Loading Content
+                  {t('modules.ielts.errorLoadingContent')}
                 </h3>
                 <p style={{ color: '#6b7280', marginBottom: '32px', fontSize: '18px' }}>
                   {error}
@@ -1169,7 +1171,7 @@ export function IELTSReadingPage() {
                   color: '#1f2937',
                   marginBottom: '12px',
                 }}>
-                  No Content Available
+                  {t('modules.ielts.noContentAvailable')}
                 </h3>
                 <p style={{ color: '#6b7280', fontSize: '18px' }}>
                   There are no reading materials available at the moment.

@@ -51,7 +51,7 @@ interface AuthProviderProps {
 }
 
 // API base URL for analytics endpoints
-const API_BASE_URL = 'https://api.exeleratetechnology.com/api';
+const API_BASE_URL = 'https://api.intelliviq.com/api';
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [authData, setAuthData] = useState<AuthData | null>(null);
@@ -307,17 +307,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string) => {
     try {
-      // Determine the correct API URL based on environment
-      // Development: Use Vite proxy (configured in vite.config.ts)
-      // Use API config for consistent URL handling
-      const isLocal = typeof window !== 'undefined' && (
-        window.location.hostname === 'localhost' || 
-        window.location.hostname === '127.0.0.1'
-      )
-      
-      const apiUrl = isLocal
-        ? '/api/auth/login.php' // Vite proxy in development
-        : API_URLS.authProxy // DigitalOcean function in production
+      // Always use API_URLS.authProxy (DigitalOcean) - includes localhost
+      const apiUrl = API_URLS.authProxy
       
       const response = await fetch(apiUrl, {
         method: 'POST',

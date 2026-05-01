@@ -81,117 +81,206 @@ export const clearAllPdfTextCache = (): void => {
 }
 
 /**
- * Extract text from PDF using pdf.js from CDN (client-side extraction)
- * Fetches PDF as blob first to handle CORS issues
+ * URLs that typically have CORS restrictions - use proxy first for these
+ */
+const CORS_PRONE_DOMAINS = [
+  'digitaloceanspaces.com',
+  'amazonaws.com',
+  'blob.core.windows.net',
+  'storage.googleapis.com',
+]
+
+const isCorsProneUrl = (url: string): boolean => {
+  try {
+    const lower = url.toLowerCase()
+    return CORS_PRONE_DOMAINS.some(domain => lower.includes(domain))
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Fetch PDF via proxy (avoids CORS)
+ */
+const fetchPdfViaProxy = async (pdfUrl: string): Promise<ArrayBuffer> => {
+  const proxyUrl = `${API_URLS.pdfProxy}?url=${encodeURIComponent(pdfUrl)}`
+  const response = await fetch(proxyUrl)
+
+  if (!response.ok) {
+    const errText = await response.text()
+    throw new Error(`Proxy failed: ${response.status} - ${errText.slice(0, 100)}`)
+  }
+
+  const blob = await response.blob()
+  // Validate we got a PDF (proxy may return JSON error)
+  const contentType = response.headers.get('content-type') || blob.type || ''
+  if (!contentType.includes('application/pdf') && !blob.type?.includes('pdf')) {
+    const text = await blob.text()
+    if (text.startsWith('{') || text.startsWith('<')) {
+      throw new Error('Proxy returned non-PDF response. Check PDF URL and CORS.')
+    }
+  }
+  return blob.arrayBuffer()
+}
+
+/**
+ * Load PDF document from URL (handles CORS via proxy when needed)
+ */
+const loadPdfDocument = async (pdfUrl: string): Promise<{ pdf: any; pdfjs: any }> => {
+  const pdfjsVersion = '3.11.174'
+  const pdfjsLib = (window as any).pdfjsLib
+
+  if (!pdfjsLib) {
+    await new Promise<void>((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsVersion}/pdf.min.js`
+      script.onload = () => {
+        ;(window as any).pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsVersion}/pdf.worker.min.js`
+        resolve()
+      }
+      script.onerror = reject
+      document.head.appendChild(script)
+    })
+  }
+
+  const pdfjs = (window as any).pdfjsLib
+  if (!pdfjs) throw new Error('Failed to load pdf.js library')
+
+  let pdfData: ArrayBuffer | string
+  if (isCorsProneUrl(pdfUrl)) {
+    try {
+      pdfData = await fetchPdfViaProxy(pdfUrl)
+    } catch (proxyError: any) {
+      console.warn('Proxy fetch failed, trying direct:', proxyError.message)
+      const response = await fetch(pdfUrl, { mode: 'cors', credentials: 'omit' })
+      if (!response.ok) throw new Error(`Failed to fetch PDF: ${response.status}`)
+      pdfData = await (await response.blob()).arrayBuffer()
+    }
+  } else {
+    try {
+      const response = await fetch(pdfUrl, { mode: 'cors', credentials: 'omit' })
+      if (!response.ok) throw new Error(`Failed to fetch PDF: ${response.status}`)
+      pdfData = await (await response.blob()).arrayBuffer()
+    } catch (fetchError: any) {
+      console.warn('Direct fetch failed, trying proxy:', fetchError.message)
+      pdfData = await fetchPdfViaProxy(pdfUrl)
+    }
+  }
+
+  const loadingTask = pdfjs.getDocument({
+    data: pdfData instanceof ArrayBuffer ? pdfData : undefined,
+    url: pdfData instanceof ArrayBuffer ? undefined : (pdfData as string),
+    withCredentials: false,
+    httpHeaders: {},
+  })
+  const pdf = await loadingTask.promise
+  return { pdf, pdfjs }
+}
+
+/**
+ * Extract text from PDF using pdf.js (text layer only)
+ */
+const extractTextFromPdfJs = async (pdf: any): Promise<string> => {
+  let fullText = ''
+  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+    const page = await pdf.getPage(pageNum)
+    const textContent = await page.getTextContent()
+    const pageText = textContent.items.map((item: any) => item.str).join(' ')
+    fullText += pageText + '\n\n'
+  }
+  return fullText.trim()
+}
+
+/**
+ * Extract text from a single PDF page image via ChatGPT Vision API
+ * Sends one page per request to stay under 1 MB serverless limit
+ */
+const extractTextFromPdfPageViaVision = async (
+  imageDataUrl: string,
+  options?: { silent?: boolean }
+): Promise<string> => {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 30000)
+
+  const response = await fetch(API_URLS.pdfExtractProxy, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pdf_page_image: imageDataUrl }),
+    signal: controller.signal,
+  })
+
+  clearTimeout(timeoutId)
+
+  if (!response.ok) {
+    const errText = await response.text()
+    throw new Error(`Vision extraction failed: ${response.status} - ${errText.slice(0, 100)}`)
+  }
+
+  const data = await response.json()
+  return data.text || ''
+}
+
+/**
+ * Extract text from image-based PDF using ChatGPT Vision API
+ * Renders each page to canvas, sends ONE page per request (stays under 1 MB limit)
+ */
+const extractTextFromPdfViaVision = async (
+  pdf: any,
+  options?: { silent?: boolean }
+): Promise<string> => {
+  const allTexts: string[] = []
+  const scale = 1.0
+  const maxWidth = 600 // Cap size to stay under 1 MB per request (DO limit)
+
+  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+    const page = await pdf.getPage(pageNum)
+    let viewport = page.getViewport({ scale })
+    if (viewport.width > maxWidth) {
+      const s = maxWidth / viewport.width
+      viewport = page.getViewport({ scale: scale * s })
+    }
+    const canvas = document.createElement('canvas')
+    canvas.width = viewport.width
+    canvas.height = viewport.height
+    const ctx = canvas.getContext('2d')
+    if (!ctx) continue
+    await page.render({ canvasContext: ctx, viewport }).promise
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.7)
+    if (!options?.silent && pageNum === 1) {
+      console.log('Sending PDF pages to ChatGPT Vision (one page per request)...')
+    }
+    const pageText = await extractTextFromPdfPageViaVision(dataUrl, options)
+    if (pageText) allTexts.push(pageText)
+  }
+
+  if (allTexts.length === 0) {
+    throw new Error('Could not extract text from PDF images')
+  }
+  return allTexts.join('\n\n').trim()
+}
+
+/**
+ * Extract text from PDF using pdf.js, with ChatGPT Vision fallback for image-based PDFs
  */
 const extractTextFromPdf = async (pdfUrl: string): Promise<string> => {
   try {
-    // Load pdf.js from CDN
-    const pdfjsVersion = '3.11.174' // Use a specific version
-    const pdfjsLib = (window as any).pdfjsLib
-    
-    // If pdf.js is not loaded, load it from CDN
-    if (!pdfjsLib) {
-      await new Promise<void>((resolve, reject) => {
-        const script = document.createElement('script')
-        script.src = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsVersion}/pdf.min.js`
-        script.onload = () => {
-          // Set worker source
-          ;(window as any).pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsVersion}/pdf.worker.min.js`
-          resolve()
-        }
-        script.onerror = reject
-        document.head.appendChild(script)
-      })
+    const { pdf } = await loadPdfDocument(pdfUrl)
+    const textFromJs = await extractTextFromPdfJs(pdf)
+
+    if (textFromJs && textFromJs.length > 0) {
+      return textFromJs
     }
 
-    const pdfjs = (window as any).pdfjsLib
-    if (!pdfjs) {
-      throw new Error('Failed to load pdf.js library')
-    }
-
-    // Fetch PDF as blob first to handle CORS issues
-    // This approach works better with CORS-restricted resources
-    let pdfData: ArrayBuffer | string
-    
-    try {
-      // Try to fetch as blob first (handles CORS better)
-      const response = await fetch(pdfUrl, {
-        mode: 'cors',
-        credentials: 'omit',
-      })
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch PDF: ${response.status} ${response.statusText}`)
-      }
-      
-      const blob = await response.blob()
-      pdfData = await blob.arrayBuffer()
-    } catch (fetchError: any) {
-      // If direct fetch fails due to CORS, try using proxy
-      console.warn('Direct fetch failed, trying proxy:', fetchError.message)
-      
-      try {
-        const isLocal = typeof window !== 'undefined' && (
-          window.location.hostname === 'localhost' || 
-          window.location.hostname === '127.0.0.1'
-        )
-        
-        const proxyUrl = isLocal
-          ? `/api/pdf-proxy?url=${encodeURIComponent(pdfUrl)}` // Local proxy (if you create one)
-          : `${API_URLS.pdfProxy}?url=${encodeURIComponent(pdfUrl)}` // DigitalOcean function
-        
-        const proxyResponse = await fetch(proxyUrl)
-        
-        if (!proxyResponse.ok) {
-          throw new Error(`Proxy failed: ${proxyResponse.status}`)
-        }
-        
-        // Proxy returns PDF as blob
-        const blob = await proxyResponse.blob()
-        pdfData = await blob.arrayBuffer()
-      } catch (proxyError: any) {
-        // Last resort: try using the URL directly with pdf.js
-        // Some servers allow pdf.js to load even if fetch fails
-        console.warn('Proxy also failed, trying URL directly:', proxyError.message)
-        pdfData = pdfUrl
-      }
-    }
-
-    // Load the PDF using the blob data or URL
-    const loadingTask = pdfjs.getDocument({
-      data: pdfData instanceof ArrayBuffer ? pdfData : undefined,
-      url: pdfData instanceof ArrayBuffer ? undefined : pdfData as string,
-      withCredentials: false,
-      httpHeaders: {},
-    })
-    
-    const pdf = await loadingTask.promise
-
-    let fullText = ''
-
-    // Extract text from each page
-    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-      const page = await pdf.getPage(pageNum)
-      const textContent = await page.getTextContent()
-      const pageText = textContent.items
-        .map((item: any) => item.str)
-        .join(' ')
-      fullText += pageText + '\n\n'
-    }
-
-    return fullText.trim()
+    // pdf.js returned empty - try ChatGPT Vision for image-based PDFs
+    console.warn('PDF has no text layer. Using ChatGPT Vision to extract text from images...')
+    return await extractTextFromPdfViaVision(pdf)
   } catch (error) {
-    console.error('Error extracting text from PDF:', error)
-    
-    // Provide more helpful error message
     if (error instanceof Error) {
       if (error.message.includes('CORS') || error.message.includes('Failed to fetch')) {
-        throw new Error('PDF cannot be accessed due to CORS restrictions. Please ensure the PDF server allows cross-origin requests.')
+        throw new Error('PDF cannot be accessed due to CORS restrictions.')
       }
-      throw new Error(`Failed to extract text from PDF: ${error.message}`)
+      throw error
     }
-    
     throw new Error(`Failed to extract text from PDF: Unknown error`)
   }
 }
@@ -204,15 +293,8 @@ const processTextWithChatGPT = async (
   apiKey?: string
 ): Promise<string> => {
   try {
-    // Determine API endpoint
-    const isLocal = typeof window !== 'undefined' && (
-      window.location.hostname === 'localhost' || 
-      window.location.hostname === '127.0.0.1'
-    )
-
-    const apiUrl = isLocal
-      ? 'http://localhost:4001/pdfExtractProxy' // Local proxy (port 4001 for chatgptProxy)
-      : API_URLS.pdfExtractProxy // DigitalOcean function for PDF extraction
+    // Use configured API URL (apiConfig handles local vs deployed)
+    const apiUrl = API_URLS.pdfExtractProxy
 
     // Truncate text if too long (ChatGPT has token limits)
     const maxLength = 100000 // Approximate character limit
@@ -300,7 +382,9 @@ export const extractPdfText = async (
     const rawText = await extractTextFromPdf(pdfUrl)
 
     if (!rawText || rawText.trim().length === 0) {
-      throw new Error('No text could be extracted from the PDF')
+      throw new Error(
+        'No text could be extracted from the PDF. The PDF may be image-based (scanned document). Try using a text-based PDF or run OCR on scanned PDFs first.'
+      )
     }
 
     if (!options?.silent) {
@@ -325,7 +409,9 @@ export const extractPdfText = async (
 
     return rawText
   } catch (error) {
-    console.error('❌ Error extracting PDF text:', error)
+    if (!options?.silent) {
+      console.error('Error extracting PDF text:', error)
+    }
     throw error
   }
 }

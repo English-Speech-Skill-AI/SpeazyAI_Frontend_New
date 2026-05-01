@@ -1,5 +1,5 @@
 {
-  "name": "SppechSkillsAi",
+  "name": "EnglishSkillAI",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
@@ -30,6 +30,7 @@
     "@radix-ui/react-toggle-group": "^1.1.2",
     "@radix-ui/react-tooltip": "^1.1.8",
     "@sendgrid/mail": "^8.1.6",
+    "canvas-confetti": "^1.9.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "*",
     "cmdk": "^1.1.1",
@@ -37,6 +38,7 @@
     "dotenv": "^17.2.3",
     "embla-carousel-react": "^8.6.0",
     "express": "^5.1.0",
+    "i18next": "^25.8.13",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.487.0",
     "motion": "*",
@@ -49,6 +51,7 @@
     "react-day-picker": "^8.10.1",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.55.0",
+    "react-i18next": "^16.5.4",
     "react-markdown": "^10.1.0",
     "react-resizable-panels": "^2.1.7",
     "react-router-dom": "^7.1.3",

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "../ui/button";
 import { ArrowLeft, PenTool, Star, Sparkles } from "lucide-react";
 import { WritingPracticeQuestion } from "./WritingPracticeQuestion";
+import { useTranslation } from "react-i18next";
 
 interface PracticeTile {
   id: string;
@@ -18,6 +19,7 @@ interface PracticeTilesProps {
 }
 
 export function PracticeTiles({ level, practiceTiles, onBack }: PracticeTilesProps) {
+  const { t } = useTranslation();
   const [selectedPractice, setSelectedPractice] = useState<PracticeTile | null>(null);
 
   const levelColors = {
@@ -27,9 +29,9 @@ export function PracticeTiles({ level, practiceTiles, onBack }: PracticeTilesPro
   };
 
   const levelTitles = {
-    beginner: "Beginner Writing",
-    intermediate: "Intermediate Writing",
-    advanced: "Advanced Writing",
+    beginner: t("writingPractice.beginnerWriting"),
+    intermediate: t("writingPractice.intermediateWriting"),
+    advanced: t("writingPractice.advancedWriting"),
   };
 
   if (selectedPractice) {
@@ -59,7 +61,7 @@ export function PracticeTiles({ level, practiceTiles, onBack }: PracticeTilesPro
               className="text-white hover:bg-white/10 hover:text-amber-300 transition-all duration-300"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Levels
+              {t("writingPractice.backToLevels")}
             </Button>
             <h1 className="text-xl text-white">{levelTitles[level]}</h1>
             <div className="w-32" />
@@ -72,9 +74,9 @@ export function PracticeTiles({ level, practiceTiles, onBack }: PracticeTilesPro
           <div className="inline-block p-4 bg-white/20 rounded-full mb-4 backdrop-blur-sm">
             <PenTool className="w-12 h-12 text-white" />
           </div>
-          <h2 className="text-4xl text-white mb-3">Choose a Writing Practice</h2>
+          <h2 className="text-4xl text-white mb-3">{t("writingPractice.chooseWritingPractice")}</h2>
           <p className="text-lg text-white/80 max-w-2xl mx-auto">
-            Select a practice topic to improve your writing skills
+            {t("writingPractice.selectPracticeTopic")}
           </p>
         </div>
 
@@ -117,7 +119,7 @@ export function PracticeTiles({ level, practiceTiles, onBack }: PracticeTilesPro
         <div className="mt-16 text-center">
           <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm px-6 py-3 rounded-full">
             <Star className="w-5 h-5 text-[#FFD600]" />
-            <span className="text-white">Practice makes perfect!</span>
+            <span className="text-white">{t("writingPractice.practiceMakesPerfect")}</span>
             <Sparkles className="w-5 h-5 text-white" />
           </div>
         </div>

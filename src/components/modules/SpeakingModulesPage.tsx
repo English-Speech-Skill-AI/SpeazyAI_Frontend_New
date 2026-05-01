@@ -1,38 +1,22 @@
 "use client"
 
-import { useNavigate } from "react-router-dom"
 import { Card, CardHeader, CardTitle } from "../ui/card"
 import { Button } from "../ui/button"
 import { ArrowLeft, GraduationCap, MessageCircle, FileText, Mic2 } from "lucide-react"
 import { PageHeader } from "../PageHeader"
 import type { CSSProperties } from "react"
+import { useTranslation } from "react-i18next"
+import { useLocalizedNavigate } from "../LocaleLayout"
 
-const speakingModules = [
-  {
-    id: "famous-speeches",
-    title: "Famous Speeches",
-    description: "Learn from great orators",
-    icon: MessageCircle,
-    gradient: "linear-gradient(135deg, #3B82F6 0%, #00B9FC 100%)",
-  },
-  {
-    id: "academic-samples",
-    title: "Academic Speech",
-    description: "Practice with school presentations",
-    icon: GraduationCap,
-    gradient: "linear-gradient(135deg, #00B9FC 0%, #246BCF 100%)",
-  },
-  {
-    id: "custom-content",
-    title: "Custom Content",
-    description: "Your uploaded materials",
-    icon: FileText,
-    gradient: "linear-gradient(135deg, #246BCF 0%, #1E3A8A 100%)",
-  },
+const speakingModuleIds = [
+  { id: "famous-speeches", titleKey: "modules.speaking.famousSpeeches", descKey: "modules.speaking.famousSpeechesDesc", icon: MessageCircle, gradient: "linear-gradient(135deg, #3B82F6 0%, #00B9FC 100%)" },
+  { id: "academic-samples", titleKey: "modules.speaking.academicSpeech", descKey: "modules.speaking.academicSpeechDesc", icon: GraduationCap, gradient: "linear-gradient(135deg, #00B9FC 0%, #246BCF 100%)" },
+  { id: "custom-content", titleKey: "modules.speaking.customContent", descKey: "modules.speaking.customContentDesc", icon: FileText, gradient: "linear-gradient(135deg, #246BCF 0%, #1E3A8A 100%)" },
 ]
 
 export function SpeakingModulesPage() {
-  const navigate = useNavigate()
+  const { t } = useTranslation()
+  const navigate = useLocalizedNavigate()
 
   const BLUE_BG: CSSProperties = {
     backgroundColor: "#1E3A8A",
@@ -71,17 +55,17 @@ export function SpeakingModulesPage() {
               className="text-white hover:bg-white/10 mb-8 rounded-2xl"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
+              {t("modules.back")}
             </Button>
             <div className="text-center">
-              <h2 className="text-3xl font-bold text-white mb-3">Speaking</h2>
-              <p className="text-base text-white/80">Choose your learning path</p>
+              <h2 className="text-3xl font-bold text-white mb-3">{t("modules.speaking.title")}</h2>
+              <p className="text-base text-white/80">{t("modules.chooseLearningPath")}</p>
             </div>
           </div>
 
           <div className="flex justify-center py-8">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl w-full">
-              {speakingModules.map((module) => (
+              {speakingModuleIds.map((module) => (
               <Card
                 key={module.id}
                 className="group bg-white border-0 cursor-pointer transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl relative overflow-hidden rounded-3xl h-full flex flex-col"
@@ -120,14 +104,14 @@ export function SpeakingModulesPage() {
                       fontWeight: 600,
                     }}
                   >
-                    {module.title}
+                    {t(module.titleKey)}
                   </CardTitle>
                   <p style={{ 
                     fontSize: "14px", 
                     color: "rgba(30, 58, 138, 0.7)",
                     lineHeight: "1.5",
                   }}>
-                    {module.description}
+                    {t(module.descKey)}
                   </p>
                 </CardHeader>
               </Card>

@@ -1,6 +1,7 @@
 "use client"
 
-import { useNavigate, useLocation } from "react-router-dom"
+import { useLocation } from "react-router-dom"
+import { useLocalizedNavigate } from "./LocaleLayout"
 import { Button } from "./ui/button"
 import { ArrowLeft } from "lucide-react"
 import { ReadingAssessmentResults } from "./ReadingAssessmentResults"
@@ -8,9 +9,10 @@ import { PageHeader } from "./PageHeader"
 import type { CSSProperties } from "react"
 import { useAuth } from "../contexts/AuthContext"
 import { useEffect, useRef } from "react"
+import { useConfetti } from "../hooks/useConfetti"
 
 export function ReadingAssessmentResultsPage() {
-  const navigate = useNavigate()
+  const navigate = useLocalizedNavigate()
   const location = useLocation()
   const { token, authData } = useAuth()
   const hasSavedRef = useRef(false)
@@ -21,6 +23,11 @@ export function ReadingAssessmentResultsPage() {
 
   // Get data from navigation state
   const { apiResponse, chapter, classData, backRoute, lessonTitle, lessonId, speech, story, novel, audioUrl, moduleType, moduleKey, moduleTitle } = (location.state as any) || {}
+
+  // Celebration confetti when results are shown (only when score > 50%)
+  const overallScore = apiResponse?.overall?.overall_score ?? 0
+  const showConfetti = !!(apiResponse && !apiResponse.error && overallScore > 50)
+  useConfetti(showConfetti)
   
   // Also handle cases where audioUrl might be passed through different state structures
   const finalAudioUrl = audioUrl || (apiResponse?.audioUrl)
@@ -173,7 +180,7 @@ export function ReadingAssessmentResultsPage() {
         console.log("Saving result to database with payload:", JSON.stringify(payload, null, 2))
 
         // Use the reading API endpoint as specified by the user
-        const response = await fetch("https://api.exeleratetechnology.com/api/reading/save-result.php", {
+        const response = await fetch("https://api.intelliviq.com/api/reading/save-result.php", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

@@ -15,21 +15,40 @@ import {
   Play,
   BookOpen,
   Menu,
+  Languages,
 } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet"
 import { useIsMobile } from "./ui/use-mobile"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select"
+import { useLanguage, useLocalizedPath } from "./LocaleLayout"
+import { useTranslation } from "react-i18next"
 
-const NAV_ITEMS = [
-  { label: "Home" },
-  { label: "About", onClick: "/about" },
-  { label: "Courses" },
-  { label: "Features" },
-  { label: "Contact", onClick: "/contact" },
+const getNavItems = (t: (key: string) => string, getPath: (p: string) => string) => [
+  { label: t("home.nav.home") },
+  { label: t("home.nav.about"), onClick: getPath("/about") },
+  { label: t("home.nav.courses") },
+  { label: t("home.nav.features") },
+  { label: t("home.nav.contact"), onClick: getPath("/contact") },
+]
+
+const LANGUAGE_OPTIONS = [
+  { value: "en" as const, label: "English" },
+  { value: "ar" as const, label: "العربية" },
 ]
 
 export function HomePage() {
   const navigate = useNavigate()
   const isMobile = useIsMobile()
+  const { t } = useTranslation()
+  const { locale, setLocale } = useLanguage()
+  const getPath = useLocalizedPath()
+  const NAV_ITEMS = getNavItems(t, getPath)
   const [isBlinking, setIsBlinking] = useState(false)
   const [eyeScale, setEyeScale] = useState(1)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -56,6 +75,7 @@ export function HomePage() {
   const TEXT_LIGHT = "#F2F6FF"
   const TEXT_MUTED = "rgba(242,246,255,0.78)"
   const CARD_TEXT = "#0F1F47"
+  const fontFamily = locale === "ar" ? "'Noto Sans Arabic', sans-serif" : "'DM Sans', sans-serif"
 
   // UPDATED: removed the first white glow gradient. Blues only.
   const BLURRY_BLUE_BG: React.CSSProperties = {
@@ -102,13 +122,36 @@ export function HomePage() {
                   variant="ghost"
                   size="icon"
                   style={{ color: "white", width: 40, height: 40 }}
-                  aria-label="Open menu"
+                  aria-label={t("home.nav.openMenu")}
                 >
                   <Menu style={{ width: 24, height: 24 }} />
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" style={{ width: 280, backgroundColor: "#1E3A8A", borderColor: "rgba(255,255,255,0.1)", padding: 0 }}>
                 <div style={{ display: "flex", flexDirection: "column", paddingTop: 24 }}>
+                  <div style={{ padding: "0 24px 16px" }}>
+                    <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 12, marginBottom: 6, display: "block" }}>{t("home.language")}</span>
+                    <Select value={locale} onValueChange={(v) => setLocale(v as "en" | "ar")}>
+                      <SelectTrigger className="w-full min-h-[44px] px-4 py-3 border-white/20 bg-white/10 text-white [&>span]:text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent
+                        style={{ backgroundColor: "#1E3A8A", color: "#F2F6FF", borderColor: "rgba(255,255,255,0.2)", width: "var(--radix-select-trigger-width)", minWidth: "var(--radix-select-trigger-width)" }}
+                        viewportStyle={{ padding: 8, height: "auto", display: "flex", flexDirection: "column", gap: 4, width: "var(--radix-select-trigger-width)", minWidth: "var(--radix-select-trigger-width)" }}
+                      >
+                        {LANGUAGE_OPTIONS.map((opt) => (
+                          <SelectItem
+                            key={opt.value}
+                            value={opt.value}
+                            style={{ padding: "8px 12px", paddingRight: 32, fontSize: 14, color: "#F2F6FF", borderRadius: 6 }}
+                          >
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", margin: "0 0 8px" }} />
                   {NAV_ITEMS.map((item, i) => (
                     <button
                       key={i}
@@ -123,16 +166,16 @@ export function HomePage() {
                   ))}
                   <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", margin: "8px 0" }} />
                   <button
-                    onClick={() => { navigate("/contact"); setMobileMenuOpen(false) }}
+                    onClick={() => { navigate(getPath("/contact")); setMobileMenuOpen(false) }}
                     style={{ textAlign: "left", padding: "12px 24px", color: "rgba(255,255,255,0.9)", background: "none", border: "none", cursor: "pointer" }}
                   >
-                    Contact Us
+                    {t("home.nav.contactUs")}
                   </button>
                   <button
-                    onClick={() => { navigate("/login"); setMobileMenuOpen(false) }}
+                    onClick={() => { navigate(getPath("/login")); setMobileMenuOpen(false) }}
                     style={{ margin: "8px 24px", padding: "12px", borderRadius: 12, background: "linear-gradient(to right, #3B82F6, #00B9FC)", color: "white", fontWeight: 600, border: "none", cursor: "pointer" }}
                   >
-                    Sign In
+                    {t("home.nav.signIn")}
                   </button>
                 </div>
               </SheetContent>
@@ -140,14 +183,37 @@ export function HomePage() {
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 12 : 16 }}>
+              <Select value={locale} onValueChange={(v) => setLocale(v as "en" | "ar")}>
+                <SelectTrigger
+                  className="w-[130px] h-10 px-4 py-2.5 gap-2 border-white/20 bg-white/10 text-white hover:bg-white/20 [&>span]:text-white"
+                  style={{ height: isMobile ? 40 : 44 }}
+                >
+                  <Languages className="w-4 h-4 shrink-0 opacity-80" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent
+                  style={{ backgroundColor: "#1E3A8A", color: "#F2F6FF", borderColor: "rgba(255,255,255,0.2)", width: "var(--radix-select-trigger-width)", minWidth: "var(--radix-select-trigger-width)" }}
+                  viewportStyle={{ padding: 8, height: "auto", display: "flex", flexDirection: "column", gap: 4, width: "var(--radix-select-trigger-width)", minWidth: "var(--radix-select-trigger-width)" }}
+                >
+                  {LANGUAGE_OPTIONS.map((opt) => (
+                    <SelectItem
+                      key={opt.value}
+                      value={opt.value}
+                      style={{ padding: "8px 12px", paddingRight: 32, fontSize: 14, color: "#F2F6FF", borderRadius: 6 }}
+                    >
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <button
-                onClick={() => navigate("/contact")}
+                onClick={() => navigate(getPath("/contact"))}
                 style={{ display: isMobile ? "none" : "block", color: TEXT_LIGHT, background: "none", border: "none", cursor: "pointer", fontSize: 14 }}
               >
-                Contact Us
+                {t("home.nav.contactUs")}
               </button>
               <Button
-                onClick={() => navigate("/login")}
+                onClick={() => navigate(getPath("/login"))}
                 style={{
                   height: isMobile ? 40 : 48,
                   paddingLeft: isMobile ? 16 : 32,
@@ -161,7 +227,7 @@ export function HomePage() {
                   cursor: "pointer",
                 }}
               >
-                Sign In
+                {t("home.nav.signIn")}
               </Button>
             </div>
           </div>
@@ -285,19 +351,18 @@ export function HomePage() {
                     </ellipse>
                   </svg>
                 </motion.div>
-                <span style={{ color: TEXT_LIGHT, fontFamily: "'DM Sans', sans-serif", fontSize: isMobile ? 28 : 48, fontWeight: 400 }}>
-                  English Skill AI
+                <span style={{ color: TEXT_LIGHT, fontFamily, fontSize: isMobile ? 28 : 48, fontWeight: 400 }}>
+                  {t("home.brand")}
                 </span>
               </div>
 
               <div id="heading-section">
-                <h1 style={{ color: TEXT_LIGHT, fontFamily: "'DM Sans', sans-serif", fontSize: isMobile ? 24 : 42, lineHeight: 1.2, fontWeight: 400, margin: 0 }}>
-                  Empowering Confident Communication with AI
+                <h1 style={{ color: TEXT_LIGHT, fontFamily, fontSize: isMobile ? 24 : 42, lineHeight: 1.2, fontWeight: 400, margin: 0 }}>
+                  {t("home.heading")}
                 </h1>
 
-                <p style={{ color: TEXT_MUTED, fontFamily: "'DM Sans', sans-serif", fontSize: isMobile ? 16 : 18, lineHeight: 1.6, marginTop: isMobile ? 12 : 16, margin: 0 }}>
-                  Transform your speaking skills with our AI-powered platform. Get instant feedback, personalized
-                  coaching, and interactive lessons designed by experts.
+                <p style={{ color: TEXT_MUTED, fontFamily, fontSize: isMobile ? 16 : 18, lineHeight: 1.6, marginTop: isMobile ? 12 : 16, margin: 0 }}>
+                  {t("home.subheading")}
                 </p>
               </div>
 
@@ -306,7 +371,7 @@ export function HomePage() {
                   variant="outline"
                   style={{ height: 48, paddingLeft: 24, paddingRight: 24, border: "2px solid rgba(255,255,255,0.6)", color: "white", borderRadius: 16, background: "transparent", fontSize: 16 }}
                 >
-                  <Play style={{ width: 16, height: 16, marginRight: 8 }} /> Watch Demo
+                  <Play style={{ width: 16, height: 16, marginRight: 8 }} /> {t("home.watchDemo")}
                 </Button>
               </div>
             </div>
@@ -327,7 +392,10 @@ export function HomePage() {
                             className="w-2 rounded-full bg-gradient-to-t from-[#3B82F6] to-[#00B9FC]"
                             style={{
                               height: `${20 + Math.random() * 40}px`,
-                              animation: `${1 + Math.random()}s pulse ease-in-out infinite`,
+                              animationName: "pulse",
+                              animationDuration: `${1 + Math.random()}s`,
+                              animationTimingFunction: "ease-in-out",
+                              animationIterationCount: "infinite",
                               animationDelay: `${i * 0.1}s`,
                             }}
                           />
@@ -337,10 +405,10 @@ export function HomePage() {
                       <div className="text-center space-y-2">
                         <div className="inline-flex items-center gap-2 text-sm" style={{ color: "#3B82F6" }}>
                           <div className="w-2 h-2 bg-[#00B9FC] rounded-full animate-pulse" />
-                          <span>Recording...</span>
+                          <span>{t("home.recording")}</span>
                         </div>
                         <p className="text-xl font-semibold" style={{ color: CARD_TEXT }}>
-                          "Practice makes perfect!"
+                          {t("home.practiceMakesPerfect")}
                         </p>
                         <p
                           className="text-sm"
@@ -348,27 +416,15 @@ export function HomePage() {
                             color: "rgba(15,31,71,0.65)",
                           }}
                         >
-                          AI analyzing your speech in real-time
+                          {t("home.aiAnalyzing")}
                         </p>
                       </div>
 
                       <div className="grid grid-cols-3 gap-3 pt-4">
                         {[
-                          {
-                            label: "Clarity",
-                            value: "95%",
-                            color: "#3B82F6",
-                          },
-                          {
-                            label: "Pace",
-                            value: "88%",
-                            color: "#3B82F6",
-                          },
-                          {
-                            label: "Tone",
-                            value: "92%",
-                            color: "#FFD600",
-                          },
+                          { label: t("home.clarity"), value: "95%", color: "#3B82F6" },
+                          { label: t("home.pace"), value: "88%", color: "#3B82F6" },
+                          { label: t("home.tone"), value: "92%", color: "#FFD600" },
                         ].map((m, i) => (
                           <div key={i} className="text-center">
                             <div className="text-2xl mb-1 font-semibold" style={{ color: m.color }}>
@@ -395,7 +451,7 @@ export function HomePage() {
                   <div className="flex items-center gap-2">
                     <BookOpen className="w-4 h-4 text-[#3B82F6]" />
                     <span className="text-sm" style={{ color: CARD_TEXT }}>
-                      1000+ Lessons
+                      {t("home.lessonsCount")}
                     </span>
                   </div>
                 </div>

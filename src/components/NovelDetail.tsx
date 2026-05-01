@@ -1,6 +1,7 @@
 "use client"
 
-import { useNavigate, useLocation, useParams } from "react-router-dom"
+import { useLocation, useParams } from "react-router-dom"
+import { useLocalizedNavigate } from "./LocaleLayout"
 import { Button } from "./ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { ArrowLeft, BookOpenCheck } from "lucide-react"
@@ -115,7 +116,7 @@ The great journey taught Marcus that life itself is an adventure, and that every
 }
 
 export function NovelDetail() {
-  const navigate = useNavigate()
+  const navigate = useLocalizedNavigate()
   const location = useLocation()
   const { novelId } = useParams<{ novelId: string }>()
   const backRoute = (location.state as any)?.backRoute || "/novel"

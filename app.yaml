@@ -8,7 +8,7 @@ name: speech-skills-ai
 static_sites:
   - name: frontend
     github:
-      repo: your-username/SppechSkillsAi  # Update with your GitHub username/repo
+      repo: your-username/EnglishSkillAI  # Update with your GitHub username/repo
       branch: master  # or 'main' if that's your default branch
     build_command: npm run build
     output_dir: build

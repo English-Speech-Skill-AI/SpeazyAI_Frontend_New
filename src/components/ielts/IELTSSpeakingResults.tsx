@@ -2,6 +2,7 @@ import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, TrendingUp, Mic } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useConfetti } from '../../hooks/useConfetti';
 
 interface PartEvaluation {
   partNumber: number;
@@ -68,6 +69,12 @@ export function IELTSSpeakingResults() {
       duration: number;
     }>]>;
   };
+
+  // Celebration confetti when results are shown (only when score > 50%)
+  const confettiScore = state?.overallScore ?? 0
+  const scorePercent = confettiScore <= 9 ? (confettiScore / 9) * 100 : confettiScore
+  const showConfetti = !!(state?.partEvaluations && scorePercent > 50)
+  useConfetti(showConfetti)
 
   if (!state || !state.partEvaluations) {
     return (
@@ -148,7 +155,7 @@ export function IELTSSpeakingResults() {
         // Save single JSON with all parts
         try {
           const response = await fetch(
-            'https://api.exeleratetechnology.com/api/ielts/speaking/save-result.php',
+            'https://api.intelliviq.com/api/ielts/speaking/save-result.php',
             {
               method: 'POST',
               headers: {
@@ -164,7 +171,7 @@ export function IELTSSpeakingResults() {
             const newToken = await refreshToken();
             if (newToken) {
               const retryResponse = await fetch(
-                'https://api.exeleratetechnology.com/api/ielts/speaking/save-result.php',
+                'https://api.intelliviq.com/api/ielts/speaking/save-result.php',
                 {
                   method: 'POST',
                   headers: {

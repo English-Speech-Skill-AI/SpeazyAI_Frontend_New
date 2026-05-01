@@ -58,7 +58,7 @@
       open: true,
       proxy: {
         '/api': {
-          target: 'https://api.exeleratetechnology.com',
+          target: 'https://api.intelliviq.com',
           changeOrigin: true,
           secure: true,
           rewrite: (path) => path,

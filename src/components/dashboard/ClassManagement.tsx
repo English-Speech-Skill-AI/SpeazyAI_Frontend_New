@@ -24,6 +24,7 @@ import {
   Check,
   ChevronDown,
   Menu,
+  List,
 } from "lucide-react"
 import {
   Dialog,
@@ -112,12 +113,22 @@ export function ClassManagement() {
     classes: "",
   })
 
+  // Add/Update Classes (org-level) dialog - Principal and Admin only
+  const [showClassesUpdateDialog, setShowClassesUpdateDialog] = useState(false)
+  const [classesUpdateOrgId, setClassesUpdateOrgId] = useState<string>("")
+  const [classesUpdateList, setClassesUpdateList] = useState("")
+  const [classesUpdateLoading, setClassesUpdateLoading] = useState(false)
+  const [classesUpdateError, setClassesUpdateError] = useState<string | null>(null)
+
   // Organizations from API
   const [organizations, setOrganizations] = useState<Organisation[]>([])
   const [organizationsList, setOrganizationsList] = useState<string[]>(["All Organizations"])
   
   // Classes from API (extracted from users - classes are in array format)
   const [availableClasses, setAvailableClasses] = useState<string[]>([])
+  // Org classes from org/classes/list.php (Principal/Admin) - fetched when Class dropdown or Assign Class dialog is used
+  const [orgClassesList, setOrgClassesList] = useState<string[]>([])
+  const [orgClassesListLoading, setOrgClassesListLoading] = useState(false)
   const [showClassDropdown, setShowClassDropdown] = useState(false)
   const [classInputValue, setClassInputValue] = useState("")
   
@@ -132,6 +143,10 @@ export function ClassManagement() {
   const [assignOrgSearchTerm, setAssignOrgSearchTerm] = useState("")
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false)
   const [userSearchTerm, setUserSearchTerm] = useState("")
+  const [isAssignClassesDropdownOpen, setIsAssignClassesDropdownOpen] = useState(false)
+  const [assignDialogUsers, setAssignDialogUsers] = useState<User[]>([])
+  const [assignDialogUsersLoading, setAssignDialogUsersLoading] = useState(false)
+  const [assignClassSubmitting, setAssignClassSubmitting] = useState(false)
 
   const [users, setUsers] = useState<User[]>([])
 
@@ -167,10 +182,88 @@ export function ClassManagement() {
     if (!showAssignClassDialog) {
       setIsAssignOrgDropdownOpen(false)
       setIsUserDropdownOpen(false)
+      setIsAssignClassesDropdownOpen(false)
       setAssignOrgSearchTerm("")
       setUserSearchTerm("")
     }
   }, [showAssignClassDialog])
+
+  // When Assign Class dialog is open (Principal/Admin), fetch org classes from list.php. API requires organisation_id for Admin.
+  useEffect(() => {
+    if (!showAssignClassDialog || !(isAdministrator() || isPrincipal())) return
+    let orgId: number | null = null
+    if (isPrincipal() && authData?.user?.organisation_id != null) orgId = Number(authData.user.organisation_id)
+    if (isAdministrator()) {
+      if (assignClassForm.filterOrganization !== "all") {
+        const org = organizations.find((o) => o.organisation === assignClassForm.filterOrganization)
+        if (org?.id) orgId = org.id
+      }
+      if (orgId == null) {
+        setOrgClassesListLoading(false)
+        setOrgClassesList([])
+        return
+      }
+    }
+    let cancelled = false
+    setOrgClassesListLoading(true)
+    fetchOrgClassesList(orgId).then((list) => {
+      if (!cancelled) setOrgClassesList(list)
+    }).catch(() => { if (!cancelled) setOrgClassesList([]) }).finally(() => { if (!cancelled) setOrgClassesListLoading(false) })
+    return () => { cancelled = true }
+  }, [showAssignClassDialog, assignClassForm.filterOrganization, authData?.user?.organisation_id, organizations])
+
+  // When Assign Class dialog is open, load users for the selected organisation so the Select User dropdown is populated
+  useEffect(() => {
+    if (!showAssignClassDialog || !(isAdministrator() || isPrincipal())) return
+    let orgId: number | null = null
+    let orgName = "All Organizations"
+    if (isPrincipal() && authData?.user?.organisation_id != null) {
+      orgId = Number(authData.user.organisation_id)
+      orgName = organizations.find((o) => o.id === orgId || o.id === Number(authData?.user?.organisation_id))?.organisation ?? orgName
+    }
+    if (isAdministrator()) {
+      if (assignClassForm.filterOrganization === "all") {
+        orgId = null
+        orgName = "All Organizations"
+      } else {
+        const org = organizations.find((o) => o.organisation === assignClassForm.filterOrganization)
+        if (org?.id) {
+          orgId = org.id
+          orgName = org.organisation
+        }
+      }
+    }
+    let cancelled = false
+    setAssignDialogUsersLoading(true)
+    fetchUsers({ page: 1, per_page: 500, organisation_id: orgId ?? undefined })
+      .then((response) => {
+        if (cancelled || !response?.data || !Array.isArray(response.data)) return
+        const list: User[] = response.data.map((user: any) => {
+          const userOrgId = user.organisation_id ?? user.organization_id
+          const resolvedOrg = organizations.find((o) => (o.id ? Number(o.id) : null) === (userOrgId ? Number(userOrgId) : null))
+          const name = `${user.first_name || ""} ${user.last_name || ""}`.trim()
+          const userClasses = user.class || []
+          let classesDisplay = "None"
+          if (Array.isArray(userClasses) && userClasses.length > 0) classesDisplay = userClasses.join(", ")
+          else if (userClasses && String(userClasses).trim()) classesDisplay = String(userClasses).trim()
+          return {
+            id: user.id?.toString() || user.user_id?.toString() || "",
+            user_id: user.user_id ?? user.id,
+            name: name || "Unknown",
+            email: user.email || "",
+            role: mapApiRoleToUIRole(user.role || "student"),
+            classes: classesDisplay,
+            organization: resolvedOrg?.organisation ?? (userOrgId ? `Org ID: ${userOrgId}` : orgName),
+            organisation_id: userOrgId,
+            isActive: user.is_active !== 0 && user.is_active !== "0" && user.is_active !== false,
+          }
+        })
+        setAssignDialogUsers(list)
+      })
+      .catch(() => { if (!cancelled) setAssignDialogUsers([]) })
+      .finally(() => { if (!cancelled) setAssignDialogUsersLoading(false) })
+    return () => { cancelled = true }
+  }, [showAssignClassDialog, assignClassForm.filterOrganization, authData?.user?.organisation_id, organizations])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -181,6 +274,7 @@ export function ClassManagement() {
         setIsFilterOrgDropdownOpen(false)
         setIsAssignOrgDropdownOpen(false)
         setIsUserDropdownOpen(false)
+        setIsAssignClassesDropdownOpen(false)
         setShowClassDropdown(false)
       }
     }
@@ -282,6 +376,70 @@ export function ClassManagement() {
     if (!authData?.user?.role) return false
     const userRole = (authData.user.role || "").toLowerCase()
     return userRole === "principal" || userRole.includes("principal")
+  }
+
+  const isTeacher = () => {
+    if (!authData?.user?.role) return false
+    const userRole = (authData.user.role || "").toLowerCase()
+    return userRole === "teacher" || userRole.includes("teacher")
+  }
+
+  // Teacher's assigned classes (from auth) - for Class dropdown when role is Teacher
+  const teacherAssignedClasses = ((): string[] => {
+    const c = authData?.user?.class
+    if (!c) return []
+    if (Array.isArray(c)) return c.map((x) => String(x).trim()).filter(Boolean)
+    if (typeof c === "string") return c.trim() ? [c.trim()] : []
+    return []
+  })()
+
+  // Classes to show in Class dropdown: org list for Principal/Admin, teacher's classes for Teacher
+  const getClassesForDropdown = (): string[] => {
+    if (isTeacher()) return teacherAssignedClasses
+    return orgClassesList.length ? orgClassesList : availableClasses
+  }
+
+  // Load org classes when Principal/Admin opens Class dropdown (Add/Edit User form)
+  const loadOrgClassesForDropdown = async () => {
+    if (isTeacher()) return
+    if (orgClassesListLoading) return
+    let orgId: number | null = null
+    if (isPrincipal() && authData?.user?.organisation_id != null) orgId = Number(authData.user.organisation_id)
+    if (isAdministrator()) {
+      const fid = formData.organisation_id && String(formData.organisation_id).trim()
+      if (fid) orgId = parseInt(fid, 10)
+    }
+    setOrgClassesListLoading(true)
+    try {
+      const list = await fetchOrgClassesList(orgId)
+      setOrgClassesList(list)
+    } catch {
+      setOrgClassesList([])
+    } finally {
+      setOrgClassesListLoading(false)
+    }
+  }
+
+  // Load org classes when user opens the Classes dropdown in Assign Class dialog (triggers API on dropdown click)
+  const loadAssignDialogClasses = async () => {
+    if (orgClassesListLoading) return
+    let orgId: number | null = null
+    if (isPrincipal() && authData?.user?.organisation_id != null) orgId = Number(authData.user.organisation_id)
+    if (isAdministrator()) {
+      if (assignClassForm.filterOrganization === "all") return
+      const org = organizations.find((o) => o.organisation === assignClassForm.filterOrganization)
+      if (org?.id) orgId = org.id
+      if (orgId == null) return
+    }
+    setOrgClassesListLoading(true)
+    try {
+      const list = await fetchOrgClassesList(orgId)
+      setOrgClassesList(list)
+    } catch {
+      setOrgClassesList([])
+    } finally {
+      setOrgClassesListLoading(false)
+    }
   }
 
   // API function to fetch organizations list
@@ -392,6 +550,120 @@ export function ClassManagement() {
   const isTeacherOrPrincipal = () => {
     const role = (authData?.user?.role || "").toLowerCase()
     return role === "teacher" || role === "principal" || role.includes("teacher") || role.includes("principal")
+  }
+
+  // API: org/classes/list.php - get list of classes (GET; backend may use token for org)
+  const fetchOrgClassesList = async (organisationId?: number | null) => {
+    const query = organisationId != null && !isNaN(organisationId) ? `?organisation_id=${organisationId}` : ""
+    const API_URL = `${apiBase}/org/classes/list.php${query}`
+    const response = await fetch(API_URL, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${API_TOKEN}`,
+      },
+    })
+    if (!response.ok) {
+      const text = await response.text()
+      try {
+        const err = JSON.parse(text)
+        throw new Error(err.message || err.error || err.msg || `API Error (${response.status})`)
+      } catch (e: any) {
+        if (e?.message) throw e
+        throw new Error(text || `API Error (${response.status})`)
+      }
+    }
+    const data = await response.json()
+    if (import.meta.env.DEV) console.log("[org/classes/list] response:", data)
+    // API returns { success, organisation_id, principals: [ { principal_id, name, email, classes: ["1A","2A",...] } ] }
+    let raw: any[] = []
+    if (Array.isArray(data?.principals)) {
+      const allClasses = new Set<string>()
+      data.principals.forEach((p: any) => {
+        const classes = p?.classes
+        if (Array.isArray(classes)) classes.forEach((c: any) => { if (c != null && String(c).trim()) allClasses.add(String(c).trim()) })
+      })
+      raw = Array.from(allClasses)
+    }
+    if (raw.length === 0 && Array.isArray(data)) raw = data
+    else if (raw.length === 0 && Array.isArray(data?.classes)) raw = data.classes
+    else if (raw.length === 0 && Array.isArray(data?.data)) raw = data.data
+    else if (raw.length === 0 && data?.data && Array.isArray(data.data?.classes)) raw = data.data.classes
+    else if (raw.length === 0 && Array.isArray(data?.data?.class_list)) raw = data.data.class_list
+    else if (raw.length === 0 && Array.isArray(data?.class_list)) raw = data.class_list
+    else if (raw.length === 0 && Array.isArray(data?.list)) raw = data.list
+    else if (raw.length === 0 && Array.isArray(data?.result)) raw = data.result
+    else if (raw.length === 0 && typeof data?.classes === "string") raw = data.classes.split(",").map((s: string) => s.trim()).filter(Boolean)
+    else if (raw.length === 0 && typeof data?.data === "string") raw = data.data.split(",").map((s: string) => s.trim()).filter(Boolean)
+    else if (raw.length === 0 && data?.data && typeof data.data === "object" && !Array.isArray(data.data)) {
+      const d = data.data as Record<string, unknown>
+      const arr = d.classes ?? d.class_list ?? d.list ?? d.data
+      if (Array.isArray(arr)) raw = arr
+    }
+    const list = raw.map((c: any) => {
+      if (c == null) return ""
+      if (typeof c === "string") return c.trim()
+      if (typeof c === "object" && (c.class != null || c.name != null || c.value != null))
+        return String(c.class ?? c.name ?? c.value).trim()
+      return String(c).trim()
+    }).filter(Boolean) as string[]
+    return [...new Set(list)].sort()
+  }
+
+  // API: org/classes/update.php - add or replace classes for an organisation (Principal and Admin only)
+  const updateOrgClasses = async (payload: { classes: string[]; replace: boolean; organisation_id?: number }) => {
+    const API_URL = `${apiBase}/org/classes/update.php`
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${API_TOKEN}`,
+      },
+      body: JSON.stringify(payload),
+    })
+    if (!response.ok) {
+      const text = await response.text()
+      try {
+        const err = JSON.parse(text)
+        throw new Error(err.message || err.error || err.msg || `API Error (${response.status})`)
+      } catch (e: any) {
+        if (e.message) throw e
+        throw new Error(text || `API Error (${response.status})`)
+      }
+    }
+    return response.json()
+  }
+
+  const handleClassesUpdateSubmit = async () => {
+    const list = classesUpdateList
+      .split(/[\n,]+/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+    if (list.length === 0) {
+      setClassesUpdateError("Enter at least one class (one per line or comma-separated).")
+      return
+    }
+    setClassesUpdateLoading(true)
+    setClassesUpdateError(null)
+    try {
+      const orgId = isAdministrator() && classesUpdateOrgId ? parseInt(classesUpdateOrgId, 10) : (authData?.user?.organisation_id != null ? Number(authData.user.organisation_id) : null)
+      const payload: { classes: string[]; replace: boolean; organisation_id?: number } = {
+        classes: list,
+        replace: true,
+      }
+      if (orgId != null && !isNaN(orgId)) payload.organisation_id = orgId
+      await updateOrgClasses(payload)
+      setShowClassesUpdateDialog(false)
+      setClassesUpdateList("")
+      setClassesUpdateOrgId("")
+      toast.success("Classes updated successfully.", { description: `Updated ${list.length} class(es).`, duration: 3000 })
+      loadUsers().catch(() => {})
+    } catch (e: any) {
+      setClassesUpdateError(e?.message || "Failed to update classes.")
+      toast.error("Failed to update classes", { description: e?.message, duration: 4000 })
+    } finally {
+      setClassesUpdateLoading(false)
+    }
   }
 
   // API function to update user
@@ -1553,8 +1825,17 @@ export function ClassManagement() {
               Upload CSV
             </Button>
             {(isAdministrator() || isPrincipal()) && (
+            <>
             <Button
-              onClick={() => setShowAssignClassDialog(true)}
+              onClick={() => {
+                setShowAssignClassDialog(true)
+                if (isPrincipal() && authData?.user?.organisation_id != null) {
+                  const org = organizations.find((o) => o.id === authData?.user?.organisation_id || o.id === Number(authData?.user?.organisation_id))
+                  if (org) setAssignClassForm((prev) => ({ ...prev, filterOrganization: org.organisation }))
+                } else if (isAdministrator()) {
+                  setAssignClassForm((prev) => ({ ...prev, filterOrganization: prev.filterOrganization || "all" }))
+                }
+              }}
               variant="outline"
               style={{
                 borderColor: "#3B82F6",
@@ -1564,6 +1845,24 @@ export function ClassManagement() {
               <Users style={{ width: "16px", height: "16px", marginRight: "8px" }} />
               Assign Class
             </Button>
+            <Button
+              onClick={() => {
+                setShowClassesUpdateDialog(true)
+                setClassesUpdateError(null)
+                setClassesUpdateList("")
+                if (isAdministrator() && organizations.length > 0) setClassesUpdateOrgId(organizations[0]?.id?.toString() ?? "")
+                else setClassesUpdateOrgId("")
+              }}
+              variant="outline"
+              style={{
+                borderColor: "#3B82F6",
+                color: "#3B82F6",
+              }}
+            >
+              <List style={{ width: "16px", height: "16px", marginRight: "8px" }} />
+              Add/Update Classes
+            </Button>
+            </>
             )}
           </div>
         </div>
@@ -2213,14 +2512,18 @@ export function ClassManagement() {
                     onChange={(e) => {
                       setClassInputValue(e.target.value)
                       setShowClassDropdown(true)
-                      if (availableClasses.includes(e.target.value)) {
+                      const list = getClassesForDropdown()
+                      if (list.includes(e.target.value)) {
                         setFormData({ ...formData, classes: e.target.value })
                       } else {
                         setFormData({ ...formData, classes: e.target.value })
                       }
                     }}
-                    onFocus={() => setShowClassDropdown(true)}
-                    placeholder="Select or type to create new class"
+                    onFocus={() => {
+                      setShowClassDropdown(true)
+                      loadOrgClassesForDropdown()
+                    }}
+                    placeholder={isTeacher() ? "Select a class" : "Select or type to create new class"}
                     style={{
                       flex: 1,
                       padding: "10px 12px",
@@ -2232,7 +2535,10 @@ export function ClassManagement() {
                   />
                   <button
                     type="button"
-                    onClick={() => setShowClassDropdown(!showClassDropdown)}
+                    onClick={() => {
+                      setShowClassDropdown(!showClassDropdown)
+                      if (!showClassDropdown) loadOrgClassesForDropdown()
+                    }}
                     style={{
                       padding: "8px",
                       background: "transparent",
@@ -2261,6 +2567,12 @@ export function ClassManagement() {
                       zIndex: 50,
                     }}
                   >
+                    {orgClassesListLoading && (
+                      <div style={{ padding: "10px 12px", fontSize: "14px", color: "rgba(30, 58, 138, 0.7)" }}>
+                        Loading classes…
+                      </div>
+                    )}
+                    {!(isTeacher()) && (
                     <button
                       type="button"
                       onClick={() => {
@@ -2285,7 +2597,8 @@ export function ClassManagement() {
                       <Plus style={{ width: "16px", height: "16px" }} />
                       Create new class "{classInputValue || "New Class"}"
                     </button>
-                    {availableClasses
+                    )}
+                    {getClassesForDropdown()
                       .filter((c) => c.toLowerCase().includes(classInputValue.toLowerCase()))
                       .map((className) => (
                         <button
@@ -2560,7 +2873,8 @@ export function ClassManagement() {
             </DialogDescription>
           </DialogHeader>
           <div style={{ display: "flex", flexDirection: "column", gap: "20px", marginTop: "20px" }}>
-            {/* Filter by Organization */}
+            {/* Filter by Organization - Admin only */}
+            {isAdministrator() && (
             <div>
               <label
                 style={{
@@ -2685,6 +2999,7 @@ export function ClassManagement() {
                 )}
               </div>
             </div>
+            )}
 
             {/* Select User */}
             <div>
@@ -2719,7 +3034,7 @@ export function ClassManagement() {
                 >
                   <span>
                     {assignClassForm.selectedUserId
-                      ? users.find((u) => u.id === assignClassForm.selectedUserId)?.name || "Select a user"
+                      ? (assignDialogUsers.find((u) => u.id === assignClassForm.selectedUserId) ?? users.find((u) => u.id === assignClassForm.selectedUserId))?.name || "Select a user"
                       : "Select a user"}
                   </span>
                   <ChevronDown style={{ width: "16px", height: "16px", flexShrink: 0 }} />
@@ -2756,9 +3071,13 @@ export function ClassManagement() {
                         outline: "none",
                       }}
                     />
-                    {users
+                    {assignDialogUsersLoading && (
+                      <div style={{ padding: "10px 12px", fontSize: "14px", color: "rgba(30, 58, 138, 0.7)" }}>
+                        Loading users…
+                      </div>
+                    )}
+                    {!assignDialogUsersLoading && assignDialogUsers
                       .filter((user) => {
-                        if (assignClassForm.filterOrganization !== "all" && user.organization !== assignClassForm.filterOrganization) return false
                         const search = userSearchTerm.toLowerCase()
                         return !search || user.name.toLowerCase().includes(search) || user.email.toLowerCase().includes(search)
                       })
@@ -2801,67 +3120,119 @@ export function ClassManagement() {
                   marginBottom: "8px",
                 }}
               >
-                Classes (comma-separated)
+                Classes
               </label>
               <p style={{ fontSize: "12px", color: "rgba(30, 58, 138, 0.6)", margin: "0 0 8px 0" }}>
-                e.g., 1A, 2B
+                Multi-select: click each class to add or remove (result saved as comma-separated)
               </p>
-              <div style={{ position: "relative" }}>
-                <input
-                  type="text"
-                  list="classes-list"
-                  value={assignClassForm.classes}
-                  onChange={(e) => {
-                    setAssignClassForm({ ...assignClassForm, classes: e.target.value })
+              <div data-dropdown style={{ position: "relative" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const opening = !isAssignClassesDropdownOpen
+                    setIsAssignClassesDropdownOpen(opening)
+                    setIsAssignOrgDropdownOpen(false)
+                    setIsUserDropdownOpen(false)
+                    if (opening) loadAssignDialogClasses()
                   }}
-                  placeholder="Select a class or type to add"
                   style={{
                     width: "100%",
-                    padding: "10px 12px",
-                    paddingRight: "40px",
+                    minHeight: "42px",
+                    padding: "8px 12px",
+                    paddingRight: "36px",
                     borderRadius: "8px",
                     border: "1px solid rgba(30, 58, 138, 0.2)",
                     fontSize: "14px",
                     color: "#1E3A8A",
                     backgroundColor: "#FFFFFF",
-                  }}
-                />
-                <datalist id="classes-list">
-                  {Array.from({ length: 12 }, (_, i) => i + 1).map((num) => (
-                    <option key={num} value={`Class ${num}`} />
-                  ))}
-                  {Array.from({ length: 12 }, (_, i) => i + 1).map((num) => (
-                    <option key={`${num}A`} value={`${num}A`} />
-                  ))}
-                  {Array.from({ length: 12 }, (_, i) => i + 1).map((num) => (
-                    <option key={`${num}B`} value={`${num}B`} />
-                  ))}
-                </datalist>
-                <div
-                  style={{
-                    position: "absolute",
-                    right: "12px",
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    pointerEvents: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    cursor: "pointer",
+                    textAlign: "left",
+                    flexWrap: "wrap",
+                    gap: "6px",
                   }}
                 >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 16 16"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
+                  <span style={{ flex: 1 }}>
+                    {(() => {
+                      const selected = assignClassForm.classes.split(",").map((c) => c.trim()).filter(Boolean)
+                      if (selected.length === 0) return "Select classes..."
+                      if (selected.length === 1) return selected[0]
+                      return `${selected.length} classes: ${selected.join(", ")}`
+                    })()}
+                  </span>
+                  <ChevronDown style={{ width: "16px", height: "16px", flexShrink: 0 }} />
+                </button>
+                {isAssignClassesDropdownOpen && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "100%",
+                      left: 0,
+                      right: 0,
+                      marginTop: "4px",
+                      backgroundColor: "#FFFFFF",
+                      border: "1px solid rgba(30, 58, 138, 0.2)",
+                      borderRadius: "8px",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                      maxHeight: "220px",
+                      overflow: "auto",
+                      zIndex: 50,
+                    }}
                   >
-                    <path
-                      d="M4 6L8 10L12 6"
-                      stroke="#1E3A8A"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </div>
+                    {orgClassesListLoading && (
+                      <div style={{ padding: "10px 12px", fontSize: "14px", color: "rgba(30, 58, 138, 0.7)" }}>
+                        Loading classes…
+                      </div>
+                    )}
+                    {!orgClassesListLoading && orgClassesList.length === 0 && (
+                      <div style={{ padding: "10px 12px", fontSize: "14px", color: "rgba(30, 58, 138, 0.6)" }}>
+                        {isAdministrator() && assignClassForm.filterOrganization === "all"
+                          ? "Select an organization above to load classes."
+                          : "No classes found. Add classes via Add/Update Classes."}
+                      </div>
+                    )}
+                    {!orgClassesListLoading && orgClassesList.map((cls) => {
+                      const selected = assignClassForm.classes
+                        .split(",")
+                        .map((c) => c.trim())
+                        .filter(Boolean)
+                        .includes(cls)
+                      return (
+                        <button
+                          key={cls}
+                          type="button"
+                          onClick={() => {
+                            const current = assignClassForm.classes
+                              .split(",")
+                              .map((c) => c.trim())
+                              .filter(Boolean)
+                            const next = selected ? current.filter((c) => c !== cls) : [...current, cls]
+                            setAssignClassForm({ ...assignClassForm, classes: next.join(", ") })
+                          }}
+                          style={{
+                            width: "100%",
+                            padding: "10px 12px",
+                            textAlign: "left",
+                            border: "none",
+                            background: assignClassForm.classes.split(",").map((c) => c.trim()).filter(Boolean).includes(cls) ? "rgba(59, 130, 246, 0.15)" : "transparent",
+                            cursor: "pointer",
+                            fontSize: "14px",
+                            color: "#1E3A8A",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                          }}
+                        >
+                          {selected && <Check style={{ width: "16px", height: "16px", flexShrink: 0, color: "#3B82F6" }} />}
+                          {!selected && <span style={{ width: "16px", flexShrink: 0 }} />}
+                          {cls}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -2884,36 +3255,159 @@ export function ClassManagement() {
               Cancel
             </Button>
             <Button
-              onClick={() => {
+              disabled={assignClassSubmitting}
+              onClick={async () => {
                 if (!assignClassForm.selectedUserId || !assignClassForm.classes) {
                   toast.error("Please select a user and enter classes")
                   return
                 }
-                // Handle class assignment
-                const selectedUser = users.find((u) => u.id === assignClassForm.selectedUserId)
-                if (selectedUser) {
-                  setUsers(
-                    users.map((user) =>
-                      user.id === assignClassForm.selectedUserId
-                        ? { ...user, classes: assignClassForm.classes }
-                        : user
+                const selectedUser = assignDialogUsers.find((u) => u.id === assignClassForm.selectedUserId) ?? users.find((u) => u.id === assignClassForm.selectedUserId)
+                if (!selectedUser) return
+                const classArray = assignClassForm.classes
+                  .split(",")
+                  .map((c) => c.trim())
+                  .filter(Boolean)
+                const nameParts = (selectedUser.name || "").trim().split(/\s+/)
+                const first_name = nameParts[0] ?? ""
+                const last_name = nameParts.slice(1).join(" ") ?? ""
+                const userId = selectedUser.user_id ?? (selectedUser.id ? parseInt(selectedUser.id, 10) : 0)
+                const orgId = selectedUser.organisation_id ?? 0
+                if (!userId || !orgId) {
+                  toast.error("User or organisation missing")
+                  return
+                }
+                setAssignClassSubmitting(true)
+                try {
+                  const res = await updateUser({
+                    user_id: userId,
+                    first_name,
+                    last_name,
+                    email: selectedUser.email || "",
+                    role: mapUIRoleToApiRole(selectedUser.role),
+                    organisation_id: orgId,
+                    class: classArray,
+                  })
+                  if (res && (res as any).success === false) throw new Error((res as any).message || "Failed to update classes")
+                  setUsers((prev) =>
+                    prev.map((user) =>
+                      user.id === assignClassForm.selectedUserId ? { ...user, classes: assignClassForm.classes } : user
                     )
                   )
-                  alert(`Classes "${assignClassForm.classes}" assigned to ${selectedUser.name}`)
+                  setAssignDialogUsers((prev) =>
+                    prev.map((user) =>
+                      user.id === assignClassForm.selectedUserId ? { ...user, classes: assignClassForm.classes } : user
+                    )
+                  )
+                  toast.success(`Classes assigned to ${selectedUser.name}`, { description: classArray.join(", "), duration: 3000 })
+                  setShowAssignClassDialog(false)
+                  setAssignClassForm({ filterOrganization: "all", selectedUserId: "", classes: "" })
+                  loadUsers().catch(() => {})
+                } catch (e: any) {
+                  toast.error("Failed to update classes", { description: e?.message || "Please try again.", duration: 5000 })
+                } finally {
+                  setAssignClassSubmitting(false)
                 }
-                setShowAssignClassDialog(false)
-                setAssignClassForm({
-                  filterOrganization: "all",
-                  selectedUserId: "",
-                  classes: "",
-                })
               }}
               style={{
                 backgroundColor: "#3B82F6",
                 color: "#FFFFFF",
               }}
             >
-              Assign
+              {assignClassSubmitting ? "Updating…" : "Assign"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add/Update Classes Dialog (Principal and Admin only) */}
+      <Dialog open={showClassesUpdateDialog} onOpenChange={(open) => { setShowClassesUpdateDialog(open); if (!open) { setClassesUpdateError(null); setClassesUpdateList(""); setClassesUpdateOrgId(""); } }}>
+        <DialogContent style={{ backgroundColor: "#FFFFFF", borderRadius: "16px", maxWidth: "500px" }}>
+          <DialogHeader>
+            <DialogTitle style={{ fontSize: "20px", fontWeight: "bold", color: "#1E3A8A" }}>
+              Add/Update Classes
+            </DialogTitle>
+            <DialogDescription style={{ fontSize: "14px", color: "rgba(30, 58, 138, 0.7)" }}>
+              Replace organisation classes with the list below (one per line or comma-separated).
+            </DialogDescription>
+          </DialogHeader>
+          <div style={{ display: "flex", flexDirection: "column", gap: "20px", marginTop: "20px" }}>
+            {isAdministrator() && (
+              <div>
+                <label style={{ display: "block", fontSize: "14px", fontWeight: "500", color: "#1E3A8A", marginBottom: "8px" }}>
+                  Organisation
+                </label>
+                <select
+                  value={classesUpdateOrgId}
+                  onChange={(e) => setClassesUpdateOrgId(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    borderRadius: "8px",
+                    border: "1px solid rgba(30, 58, 138, 0.2)",
+                    fontSize: "14px",
+                    color: "#1E3A8A",
+                    backgroundColor: "#FFFFFF",
+                  }}
+                >
+                  {organizations.map((org) => (
+                    <option key={org.id} value={String(org.id)}>{org.organisation}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {isPrincipal() && authData?.user?.organisation_id != null && (
+              <div>
+                <label style={{ display: "block", fontSize: "14px", fontWeight: "500", color: "#1E3A8A", marginBottom: "8px" }}>
+                  Organisation
+                </label>
+                <div style={{ padding: "10px 12px", borderRadius: "8px", border: "1px solid rgba(30, 58, 138, 0.2)", fontSize: "14px", color: "#1E3A8A", backgroundColor: "rgba(30, 58, 138, 0.05)" }}>
+                  {organizations.find((o) => o.id === authData?.user?.organisation_id)?.organisation ?? "Your organisation"}
+                </div>
+              </div>
+            )}
+            <div>
+              <label style={{ display: "block", fontSize: "14px", fontWeight: "500", color: "#1E3A8A", marginBottom: "8px" }}>
+                Classes
+              </label>
+              <p style={{ fontSize: "12px", color: "rgba(30, 58, 138, 0.6)", margin: "0 0 8px 0" }}>
+                One per line or comma-separated, e.g. 3-A, 4-A, 5-A, +1, +2
+              </p>
+              <textarea
+                value={classesUpdateList}
+                onChange={(e) => setClassesUpdateList(e.target.value)}
+                placeholder={"3-A\n4-A\n5-A\n6-A\n7-A\n8-A\n9-A\n10-A\n+1\n+2"}
+                rows={6}
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: "8px",
+                  border: "1px solid rgba(30, 58, 138, 0.2)",
+                  fontSize: "14px",
+                  color: "#1E3A8A",
+                  backgroundColor: "#FFFFFF",
+                  resize: "vertical",
+                }}
+              />
+            </div>
+            {classesUpdateError && (
+              <p style={{ fontSize: "13px", color: "#DC2626", margin: 0 }}>{classesUpdateError}</p>
+            )}
+          </div>
+          <DialogFooter style={{ marginTop: "24px" }}>
+            <Button
+              variant="outline"
+              onClick={() => { setShowClassesUpdateDialog(false); setClassesUpdateError(null); setClassesUpdateList(""); setClassesUpdateOrgId(""); }}
+              disabled={classesUpdateLoading}
+              style={{ borderColor: "#1E3A8A", color: "#1E3A8A" }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleClassesUpdateSubmit}
+              disabled={classesUpdateLoading}
+              style={{ backgroundColor: "#3B82F6", color: "#FFFFFF" }}
+            >
+              {classesUpdateLoading ? "Updating…" : "Update Classes"}
             </Button>
           </DialogFooter>
         </DialogContent>
