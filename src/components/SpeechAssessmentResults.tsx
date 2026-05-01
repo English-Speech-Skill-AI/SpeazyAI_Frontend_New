@@ -6,7 +6,7 @@ import React from "react"
 import { useState, useRef, useEffect } from "react"
 import { useTranslation } from "react-i18next"
 import { useLanguage } from "./LocaleLayout"
-import { API_URLS } from '@/config/apiConfig';
+import { API_URLS, getSpeechProxyUrl } from '@/config/apiConfig';
 import { Card, CardHeader, CardContent, CardTitle } from "./ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog"
 import { Mic, BookOpen, AlertTriangle, Volume2, Award, Brain, Square, Play, Pause, LayoutDashboard, ChevronDown, BookText } from "lucide-react"
@@ -19,6 +19,7 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
   const { locale } = useLanguage()
   const [activeSection, setActiveSection] = useState<NavigationItem>("pronunciation")
   const [selectedWord, setSelectedWord] = useState<string | null>(null)
+  const [selectedWordScore, setSelectedWordScore] = useState<number | null>(null)
   const [isRecording, setIsRecording] = useState(false)
   const [recordedAudio, setRecordedAudio] = useState<string | null>(null)
   const [practiceScore, setPracticeScore] = useState<number | null>(null)
@@ -459,6 +460,16 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
     return updatedWordScores.get(wordName) ?? originalScore
   }
 
+  // Find word score entry by display name (uses normalizeWord for robust matching)
+  const findWordScoreEntry = (displayName: string) => {
+    if (!displayName) return undefined
+    const nw = normalizeWord(displayName)
+    return (wordScores || []).find((w: any) => w && normalizeWord(w.name) === nw)
+  }
+
+  const getPhonemeLabel = (p: any): string =>
+    typeof p === "string" ? p : (p?.ipa_label ?? p?.symbol ?? String(p ?? ""))
+
   const playPhonemeSound = (phoneme: string) => {
     const utterance = new SpeechSynthesisUtterance(phoneme)
     utterance.rate = 0.5
@@ -485,7 +496,7 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
     })
   }
 
-  // Simulate improved score for practice pronunciation (no API call)
+  // Call real API for practice pronunciation assessment
   const callPracticeAPI = async (audioBlob: Blob) => {
     if (!selectedWord) {
       setIsLoadingPractice(false)
@@ -494,47 +505,55 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
 
     setIsLoadingPractice(true)
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 800))
-      
-      // Safely get current score for the selected word
-      const wordScoreEntry = (wordScores || []).find((w: any) => w && w.name === selectedWord)
-      const originalScore = wordScoreEntry?.score || 0
-      const currentScore = getWordDisplayScore(selectedWord, originalScore)
-      
-      // Simulate an improved score: add 10-30 points, capped at 100
-      // Higher improvement for lower scores, smaller improvement for higher scores
-      let improvement = 0
-      if (currentScore < 50) {
-        improvement = Math.floor(Math.random() * 20) + 15 // 15-35 points
-      } else if (currentScore < 70) {
-        improvement = Math.floor(Math.random() * 15) + 10 // 10-25 points
-      } else {
-        improvement = Math.floor(Math.random() * 10) + 5 // 5-15 points
+      const base64Audio = await blobToBase64(audioBlob)
+      const endpoint = "https://apis.languageconfidence.ai/speech-assessment/scripted/uk"
+      const proxyUrl = getSpeechProxyUrl(endpoint)
+
+      const payload = JSON.stringify({
+        audio_base64: base64Audio,
+        audio_format: "webm",
+        expected_text: selectedWord,
+      })
+
+      const response = await fetch(`${proxyUrl}?endpoint=${encodeURIComponent(endpoint)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: payload,
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`API Error (${response.status}): ${errorText}`)
       }
-      
-      const improvedScore = Math.min(100, Math.max(0, currentScore + improvement))
-      const roundedScore = Math.round(improvedScore)
-      
-      setPracticeScore(roundedScore)
-      
-      // Update the word score in the breakdown when practice score is received
-      if (selectedWord) {
-        setUpdatedWordScores((prev) => {
-          try {
+
+      let apiData = await response.json()
+      // Unwrap proxy response (DO returns { body }, local may return directly)
+      if (apiData && typeof apiData.body === "string") {
+        try {
+          apiData = JSON.parse(apiData.body)
+        } catch (_) {}
+      } else if (apiData && typeof apiData.body === "object" && apiData.body !== null) {
+        apiData = apiData.body
+      } else if (apiData && typeof apiData.data === "object" && apiData.data !== null) {
+        apiData = apiData.data
+      }
+      const pronunciationScore = apiData?.pronunciation?.overall_score
+
+      if (pronunciationScore !== undefined && pronunciationScore !== null) {
+        const roundedScore = Math.round(pronunciationScore)
+        setPracticeScore(roundedScore)
+        if (selectedWord) {
+          setUpdatedWordScores((prev) => {
             const newMap = new Map(prev)
             newMap.set(selectedWord, roundedScore)
             return newMap
-          } catch (err) {
-            console.error("Error updating word scores:", err)
-            return prev
-          }
-        })
+          })
+        }
+      } else {
+        console.warn("No pronunciation overall_score found in API response")
       }
     } catch (error) {
-      console.error("Error simulating practice score:", error)
-      // Ensure loading state is cleared even on error
-      setIsLoadingPractice(false)
+      console.error("Error calling practice API:", error)
     } finally {
       setIsLoadingPractice(false)
     }
@@ -1361,10 +1380,13 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
                 const colors = getScoreColor(displayScore)
                 return (
                   <button
-                    key={idx}
+                    type="button"
+                    key={`${word.name}-${idx}`}
                     onClick={() => {
                       const newSelectedWord = selectedWord === word.name ? null : word.name
+                      const scoreForWord = getWordDisplayScore(word.name, word.score)
                       setSelectedWord(newSelectedWord)
+                      setSelectedWordScore(newSelectedWord ? scoreForWord : null)
                       // Reset scores when selecting a new word
                       if (newSelectedWord !== selectedWord) {
                         setPracticeScore(null)
@@ -1424,16 +1446,16 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
                   <div className="flex flex-col items-end gap-2">
                     <div
                       style={{
-                        backgroundColor: getScoreColor(getWordDisplayScore(selectedWord, wordScores.find((w) => w.name === selectedWord)?.score || 0)).bg,
-                        borderColor: getScoreColor(getWordDisplayScore(selectedWord, wordScores.find((w) => w.name === selectedWord)?.score || 0)).border,
-                        color: getScoreColor(getWordDisplayScore(selectedWord, wordScores.find((w) => w.name === selectedWord)?.score || 0)).text,
+                        backgroundColor: getScoreColor(getWordDisplayScore(selectedWord, selectedWordScore ?? 0)).bg,
+                        borderColor: getScoreColor(getWordDisplayScore(selectedWord, selectedWordScore ?? 0)).border,
+                        color: getScoreColor(getWordDisplayScore(selectedWord, selectedWordScore ?? 0)).text,
                         padding: "8px 16px",
                         borderRadius: "8px",
                         borderWidth: "2px",
                         fontWeight: "600",
                       }}
                     >
-                      Score: {getWordDisplayScore(selectedWord, wordScores.find((w) => w.name === selectedWord)?.score || 0)}
+                      Score: {getWordDisplayScore(selectedWord, selectedWordScore ?? 0)}
                     </div>
 
                     <DialogTrigger asChild>
@@ -1498,18 +1520,17 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
               <div className="mb-4">
                 <h4 className="text-sm font-semibold text-gray-700 mb-2">{t("speechResults.phonemes")}</h4>
                 <div className="flex flex-wrap gap-2">
-                  {wordScores.find((w) => w.name === selectedWord)?.phonemes?.length > 0 ? (
-                    wordScores
-                      .find((w) => w.name === selectedWord)
+                  {findWordScoreEntry(selectedWord)?.phonemes?.length > 0 ? (
+                    findWordScoreEntry(selectedWord)
                       ?.phonemes?.map((p: any, idx: any) => (
                         <button
                           key={idx}
                           type="button"
-                          onClick={() => playPhonemeSound(p.ipa_label || p)}
+                          onClick={() => playPhonemeSound(getPhonemeLabel(p))}
                           title="Play sound"
                           className="inline-flex items-center gap-2 border border-blue-300 bg-white px-3 py-2 rounded-lg hover:bg-blue-50 transition-colors"
                         >
-                          <span className="font-mono text-blue-700">{p.ipa_label || p}</span>
+                          <span className="font-mono text-blue-700">{getPhonemeLabel(p)}</span>
                           {p.phoneme_score !== undefined && (
                             <span className="text-sm text-gray-600">({p.phoneme_score})</span>
                           )}
@@ -1601,9 +1622,7 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
                     <div className="px-4 py-2 bg-orange-100 border-2 border-orange-400 rounded-lg text-center min-w-[100px] flex-1 md:flex-none">
                       <p className="text-xs text-gray-600 mb-1">Current</p>
                       <p className="text-xl font-bold text-orange-600">
-                        {currentWordScore !== null 
-                          ? currentWordScore 
-                          : getWordDisplayScore(selectedWord, wordScores.find((w) => w.name === selectedWord)?.score || 0)}
+                        {currentWordScore ?? selectedWordScore ?? 0}
                       </p>
                     </div>
                     {/* Practice Score (Green) - shows API result */}
@@ -1650,7 +1669,7 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
                 {practiceScore !== null && !isLoadingPractice && (
                   <div className="mt-4">
                     {(() => {
-                      const originalScore = wordScores.find((w) => w.name === selectedWord)?.score || 0
+                      const originalScore = selectedWordScore ?? findWordScoreEntry(selectedWord)?.score ?? 0
                       const currentScore = currentWordScore !== null ? currentWordScore : originalScore
                       if (practiceScore > currentScore) {
                         return (

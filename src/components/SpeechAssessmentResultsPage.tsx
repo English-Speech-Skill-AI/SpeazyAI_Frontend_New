@@ -9,6 +9,7 @@ import { PageHeader } from "./PageHeader"
 import type { CSSProperties } from "react"
 import { useAuth } from "../contexts/AuthContext"
 import { useEffect, useRef } from "react"
+import { useConfetti } from "../hooks/useConfetti"
 
 export function SpeechAssessmentResultsPage() {
   const navigate = useNavigate()
@@ -23,7 +24,12 @@ export function SpeechAssessmentResultsPage() {
 
   // Get data from navigation state
   const { apiResponse, chapter, classData, backRoute, lessonTitle, lessonId, speech, audioUrl } = (location.state as any) || {}
-  
+
+  // Celebration confetti when results are shown (only when score > 50%)
+  const overallScore = apiResponse?.overall?.overall_score ?? 0
+  const showConfetti = !!(apiResponse && !apiResponse.error && overallScore > 50)
+  useConfetti(showConfetti)
+
   // Also handle cases where audioUrl might be passed through different state structures
   const finalAudioUrl = audioUrl || (apiResponse?.audioUrl)
   

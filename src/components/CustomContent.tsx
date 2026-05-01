@@ -170,14 +170,12 @@ export function CustomContent({ onBack }: CustomContentProps) {
 
   // Helper function to map API response to CustomContentItem
   const mapApiItemToContentItem = (item: any): CustomContentItem => {
-    console.log("Mapping item:", item)
     const mapped = {
       id: item.id?.toString() || item.content_id?.toString() || item.custom_pdf_id?.toString() || Date.now().toString(),
       title: item.title || item.name || "",
-      pdfUrl: item.pdf_url || item.pdfUrl || item.pdf_url || "",
+      pdfUrl: item.pdf_url || item.pdfUrl || item.url || item.file_url || "",
       uploadDate: item.upload_date || item.uploadDate || item.created_at || item.date_created || new Date().toISOString().split("T")[0],
     }
-    console.log("Mapped result:", mapped)
     return mapped
   }
 
@@ -1066,8 +1064,8 @@ export function CustomContent({ onBack }: CustomContentProps) {
     // Truncate to 300 words max (API requirement) while preserving sentences
     const extractedPdfText = fullPdfText ? truncateTextToWords(fullPdfText, 300) : ""
     
-    // Always use scripted endpoint (license requirement)
-    const speechEndpoint = "https://apis.languageconfidence.ai/speech-assessment/scripted/uk"
+    // Use unscripted for PDF content (more flexible, avoids 422 when text doesn't match exactly)
+    const speechEndpoint = "https://apis.languageconfidence.ai/speech-assessment/unscripted/uk"
 
     // Extract gradient colors for lessonColor prop
     const gradientMap: { [key: string]: string } = {

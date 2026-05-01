@@ -1,6 +1,9 @@
 // DigitalOcean Serverless Function - PDF Proxy
 // GET ?url=... - Proxies PDF fetches to avoid CORS
 // POST (multipart/form-data) - Proxies PDF uploads to api.intelliviq.com/upload-pdf
+//
+// CORS: Do NOT set Access-Control-* headers here. DigitalOcean platform adds them.
+// If we add them too, the response gets multiple values (e.g. "*, https://...") and the browser blocks.
 
 function parseQuery(q) {
   if (q == null) return {};
@@ -16,30 +19,11 @@ function parseQuery(q) {
   return out;
 }
 
-function getCorsHeaders(event) {
-  const headers = event?.__ow_headers || event?.http?.headers || event?.headers || {};
-  const origin = headers.origin || headers.Origin || "";
-  const allowedOrigins = [
-    "https://speazyai.netlify.app",
-    "https://englishskill.intelliviq.com",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-  ];
-  const isAllowed = allowedOrigins.includes(origin) || origin.includes(".netlify.app") || origin.includes("intelliviq.com");
-  const allowedOrigin = isAllowed ? origin : "https://englishskill.intelliviq.com";
-  return {
-    "Access-Control-Allow-Origin": allowedOrigin,
-    "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  };
-}
-
 export async function main(event) {
   const method = event?.__ow_method ?? event?.http?.method ?? event?.method ?? "GET";
-  const cors = getCorsHeaders(event);
 
   if (method === "OPTIONS") {
-    return { statusCode: 204, headers: cors };
+    return { statusCode: 204 };
   }
 
   try {
@@ -49,7 +33,7 @@ export async function main(event) {
       if (rawBody == null) {
         return {
           statusCode: 400,
-          headers: { ...cors, "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ success: false, error: "Missing request body" }),
         };
       }
@@ -88,7 +72,7 @@ export async function main(event) {
 
       return {
         statusCode: response.status,
-        headers: { ...cors, "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json" },
         body: typeof responseData === "object" ? JSON.stringify(responseData) : responseText,
       };
     }
@@ -109,7 +93,7 @@ export async function main(event) {
       console.error("pdfProxy: missing url. Query keys:", Object.keys(query).join(", "), "| event.url:", !!event?.url, "| __ow_query snippet:", qs || "(none)", "| event keys:", keys.join(", "));
       return {
         statusCode: 400,
-        headers: { ...cors, "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           error: "PDF URL is required",
           hint: "Use GET ?url=<encoded-pdf-url>. Check function logs for received query.",
@@ -127,7 +111,7 @@ export async function main(event) {
     if (!response.ok) {
       return {
         statusCode: response.status,
-        headers: { ...cors, "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           error: `Failed to fetch PDF: ${response.status} ${response.statusText}`,
         }),
@@ -140,7 +124,6 @@ export async function main(event) {
     return {
       statusCode: 200,
       headers: {
-        ...cors,
         "Content-Type": "application/pdf",
         "Content-Disposition": "inline",
         "Cache-Control": "public, max-age=3600",
@@ -152,7 +135,7 @@ export async function main(event) {
     console.error("pdfProxy error:", err);
     return {
       statusCode: 500,
-      headers: { ...cors, "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         error: "Proxy failure",
         details: err?.message || "Server error",
