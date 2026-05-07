@@ -41,6 +41,7 @@
     "i18next": "^25.8.13",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.487.0",
+    "microsoft-cognitiveservices-speech-sdk": "^1.49.0",
     "motion": "*",
     "multer": "^2.0.2",
     "next": "16.0.1",
@@ -78,7 +79,8 @@
     "proxy:speech": "node speechProxyServer.js",
     "proxy:chatgpt": "node chatgptProxyServer.js",
     "proxy:all": "concurrently \"npm run proxy:speech\" \"npm run proxy:chatgpt\"",
-    "proxy:support": "node supportProxyServer.js"
+    "proxy:support": "node supportProxyServer.js",
+    "test:azure": "node scripts/azure-speech-test.js"
   },
   "engines": {
     "node": ">=18.0.0",

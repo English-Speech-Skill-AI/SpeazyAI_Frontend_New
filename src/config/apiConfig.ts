@@ -5,8 +5,11 @@ const isNetlify = typeof window !== 'undefined' && window.location.hostname.incl
 
 // DigitalOcean Function URLs (used when deployed to DigitalOcean App Platform)
 const DO_BASE = 'https://faas-blr1-8177d592.doserverless.co/api/v1/web/fn-a38d3580-f602-4111-8967-d449fc5ef00e/default';
+// Optional: VITE_SPEECH_PROXY_FUNCTION=azure uses dedicated DO function `azureSpeechProxy` (Azure-only). Override URL entirely with VITE_SPEECH_PROXY_URL.
+const DO_SPEECH_PATH =
+  import.meta.env.VITE_SPEECH_PROXY_FUNCTION === 'azure' ? '/azureSpeechProxy' : '/speechProxy';
 const DIGITALOCEAN_FUNCTIONS = {
-  speechProxy: import.meta.env.VITE_SPEECH_PROXY_URL || `${DO_BASE}/speechProxy`,
+  speechProxy: import.meta.env.VITE_SPEECH_PROXY_URL || `${DO_BASE}${DO_SPEECH_PATH}`,
   chatgptProxy: import.meta.env.VITE_CHATGPT_PROXY_URL || `${DO_BASE}/chatgptProxy`,
   authProxy: import.meta.env.VITE_AUTH_PROXY_URL || `${DO_BASE}/authProxy`,
   pdfProxy: import.meta.env.VITE_PDF_PROXY_URL || `${DO_BASE}/pdfProxy`,
@@ -17,7 +20,10 @@ const DIGITALOCEAN_FUNCTIONS = {
 
 // Local development proxy URLs (if running proxy servers locally)
 const LOCAL_PROXIES = {
-  speechProxy: 'http://localhost:4000/speechProxy',
+  speechProxy:
+    import.meta.env.VITE_SPEECH_PROXY_FUNCTION === 'azure'
+      ? 'http://localhost:4000/azureSpeechProxy'
+      : 'http://localhost:4000/speechProxy',
   chatgptProxy: 'http://localhost:4001/chatgptProxy',
   authProxy: 'http://localhost:4001/authProxy',
   pdfProxy: 'http://localhost:4001/pdfProxy',

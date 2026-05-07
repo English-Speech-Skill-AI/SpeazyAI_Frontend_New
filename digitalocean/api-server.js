@@ -74,6 +74,12 @@ app.post('/api/speech-proxy', async (req, res) => {
       apiBody.expected_text = expectedText;
     }
 
+    if (!apiBody.audio_base64 || !apiBody.audio_format) {
+      return res.status(400).json({
+        error: "Missing required fields: audio_base64, audio_format",
+      });
+    }
+
     const apiKey = process.env.LC_API_KEY || process.env.SPEECH_API_KEY;
     
     if (!apiKey) {

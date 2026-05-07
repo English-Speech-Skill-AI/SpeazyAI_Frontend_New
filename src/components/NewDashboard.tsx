@@ -21,6 +21,7 @@ import {
   Headphones,
   Award,
   Clock,
+  Sparkles,
 } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { useLocalizedNavigate } from "./LocaleLayout"
@@ -168,7 +169,7 @@ export function NewDashboard() {
     loadSpeakingTime()
   }, [token])
 
-  // Main learning modules (6 tiles in order: Speaking, Writing, Reading, Listening, IELTS, AI Tutor)
+  // Main learning modules (Speaking, Writing, Reading, Listening, IELTS, AI Tutor, Azure Speech [test])
   const modules = [
     { id: "speaking", titleKey: "dashboard.speaking", descKey: "dashboard.speakingDesc", icon: Mic2, color: "#3B82F6", progress: 60 },
     { id: "writing", titleKey: "dashboard.writing", descKey: "dashboard.writingDesc", icon: PenTool, color: "#00B9FC", progress: 45 },
@@ -176,6 +177,7 @@ export function NewDashboard() {
     { id: "listening-practice", titleKey: "dashboard.listening", descKey: "dashboard.listeningDesc", icon: Headphones, color: "#1E3A8A", progress: 30 },
     { id: "ielts", titleKey: "dashboard.ieltsPreparation", descKey: "dashboard.ieltsDesc", icon: Award, color: "#00B9FC", progress: 0 },
     { id: "chat", titleKey: "dashboard.aiTutor", descKey: "dashboard.aiTutorDesc", icon: MessageCircle, color: "#3B82F6", progress: 0 },
+    { id: "azure-speech-test", titleKey: "dashboard.azureSpeech", descKey: "dashboard.azureSpeechDesc", icon: Sparkles, color: "#7C3AED", progress: 0 },
   ]
 
 
@@ -188,6 +190,7 @@ export function NewDashboard() {
       "ielts": "/ielts",
       "chat": "/chat",
       "connect-teacher": "/connect-teacher",
+      "azure-speech-test": "/azure-speech-test",
     }
     const route = navigationMap[moduleId]
     if (route) navigate(route)

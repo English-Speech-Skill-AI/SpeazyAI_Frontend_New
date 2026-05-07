@@ -65,6 +65,8 @@
     "ieltsDesc": "إعداد كامل لاختبار IELTS",
     "aiTutor": "معلم الذكاء الاصطناعي",
     "aiTutorDesc": "احصل على تدريب شخصي",
+    "azureSpeech": "Azure Speech",
+    "azureSpeechDesc": "اختبار تقييم النطق من Azure",
     "melloWelcome": "مرحباً! مرحباً بعودتك، {{name}}!",
     "melloStreak": "أنت على موجة {{count}} يوم متتالي! استمر! 👋🎉",
     "melloReady": "هل أنت مستعد لبدء رحلة التعلم؟ 👋",

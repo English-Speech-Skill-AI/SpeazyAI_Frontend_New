@@ -48,6 +48,7 @@ import { OfficialConversations } from "./components/listening-practice/OfficialC
 import { FormalConversations } from "./components/listening-practice/FormalConversations";
 import { Connectteacher } from "./components/Connectteacher";
 import { NewDashboard } from "./components/NewDashboard";
+import { AzureSpeechTest } from "./components/AzureSpeechTest";
 import { SkillDetail } from "./components/SkillDetail"
 import ReadingPage from "./components/ReadingPage"
 import { ReadingModulesPage } from "./components/modules/ReadingModulesPage"
@@ -132,6 +133,7 @@ export default function App() {
             <Route path="progress-dashboard/students/:userId?" element={<ProtectedRoute><StudentDetailsPage /></ProtectedRoute>} />
             <Route path="progress-dashboard/license" element={<ProtectedRoute><LicenseManagement /></ProtectedRoute>} />
             <Route path="skills-home" element={<ProtectedRoute><NewDashboard /></ProtectedRoute>} />
+            <Route path="azure-speech-test" element={<ProtectedRoute><AzureSpeechTest /></ProtectedRoute>} />
             <Route path="skills/:skillId" element={<ProtectedRoute><SkillDetail /></ProtectedRoute>} />
             <Route path="reading-page" element={<ProtectedRoute><ReadingPage /></ProtectedRoute>} />
             <Route path="reading-modules" element={<ProtectedRoute><ReadingModulesPage /></ProtectedRoute>} />

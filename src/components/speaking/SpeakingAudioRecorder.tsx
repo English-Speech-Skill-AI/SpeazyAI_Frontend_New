@@ -6,6 +6,7 @@ import { Mic, Square, Play, Pause, RotateCcw } from "lucide-react"
 import { RecordingWaveform } from "../recordingWaveform"
 import { LoadingAssessment } from "../loadingAssessment"
 import { getSpeechProxyUrl } from '@/config/apiConfig';
+import { speechProxyResponseJson } from "@/utils/normalizeSpeechProxyResponse";
 
 export function SpeakingAudioRecorder({
   expectedText = "",
@@ -231,17 +232,7 @@ export function SpeakingAudioRecorder({
         throw new Error(`API Error (${response.status}): ${errorText}`)
       }
 
-      let data = await response.json()
-      // Unwrap proxy response: DO returns { statusCode, body } where body may be object or string
-      if (data && typeof data.body === "string") {
-        try {
-          data = JSON.parse(data.body)
-        } catch (_) {}
-      } else if (data && typeof data.body === "object" && data.body !== null) {
-        data = data.body
-      } else if (data && typeof data.data === "object" && data.data !== null) {
-        data = data.data
-      }
+      const data = await speechProxyResponseJson(response)
       setApiResponse(data)
       // Pass API response and audio URL to parent component
       if (onApiResponse) {

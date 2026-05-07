@@ -5,6 +5,7 @@ import React from "react"
 //@ts-ignore
 import { useState, useRef, useEffect } from "react"
 import { API_URLS, getSpeechProxyUrl } from '@/config/apiConfig';
+import { speechProxyResponseJson } from "@/utils/normalizeSpeechProxyResponse";
 import { Card, CardHeader, CardContent, CardTitle } from "./ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog"
 import { Mic, BookOpen, AlertTriangle, Volume2, Award, Brain, Square, Play, Pause, LayoutDashboard, ChevronDown, BookText } from "lucide-react"
@@ -507,7 +508,7 @@ export function SpeakingAssessmentResults({ data, audioUrl: propAudioUrl }) {
         throw new Error(`API Error (${response.status}): ${errorText}`)
       }
 
-      const apiData = await response.json()
+      const apiData = await speechProxyResponseJson(response)
       console.log("Practice API Response:", apiData)
 
       // Extract overall_score from pronunciation

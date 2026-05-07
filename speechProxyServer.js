@@ -1,4 +1,12 @@
-// A simple local proxy server for LanguageConfidence API
+// Local speech proxy.
+//   POST /speechProxy        -> Language Confidence (matches the production speechProxy DO function).
+//   POST /azureSpeechProxy   -> Azure Speech REST API (matches the new azureSpeechProxy DO function).
+//                              No SDK / ffmpeg dependency; pure REST.
+//   GET  /azureSpeechProxy?mode=info -> diagnostic.
+//
+// Run:  npm run proxy:speech
+// Env:  LC_API_KEY                                       (for /speechProxy)
+//       SPEECH_KEY  / SPEECH_REGION  / AZURE_SPEECH_LANGUAGE  (for /azureSpeechProxy)
 import express from "express";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
@@ -11,14 +19,13 @@ app.use(cors());
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
+// ---------- Language Confidence proxy ---------------------------------------
 app.post("/speechProxy", async (req, res) => {
   try {
-    // Build API body: strip endpoint; keep expected_text for scripted (scripted/uk expects "expected_text", not "reference_text")
     const { endpoint: _e, expected_text: expectedText, script, ...rest } = req.body;
     let apiBody = { ...rest };
     delete apiBody.script;
 
-    // Get base endpoint: query param wins, then body endpoint, then default to unscripted
     let targetEndpoint =
       req.query.endpoint ||
       _e ||
@@ -28,24 +35,17 @@ app.post("/speechProxy", async (req, res) => {
       typeof targetEndpoint === "string" &&
       targetEndpoint.includes("speech-assessment/scripted");
 
-    // Rule: only switch from scripted -> unscripted when expected_text is > 300 chars
     if (isScripted && expectedText != null) {
       const textForLength = String(expectedText).trim();
       if (textForLength.length > 300) {
-        // Change to the matching unscripted endpoint, but ONLY in this case
-        targetEndpoint = targetEndpoint.replace(
-          "/scripted/",
-          "/unscripted/"
-        );
+        targetEndpoint = targetEndpoint.replace("/scripted/", "/unscripted/");
         isScripted = false;
       }
     }
 
-    // Scripted: use the field name the API accepts (LC scripted/uk = "expected_text"; set LC_SCRIPT_FIELD to override)
     const scriptedTextField = process.env.LC_SCRIPT_FIELD || "expected_text";
     if (isScripted && expectedText != null && String(expectedText).trim() !== "") {
       let text = typeof expectedText === "string" ? expectedText : String(expectedText);
-      // Avoid sending double-wrapped quotes (e.g. "\"I have a dream...\"")
       if (text.length >= 2 && text.startsWith('"') && text.endsWith('"')) {
         try {
           const unquoted = JSON.parse(text);
@@ -55,7 +55,6 @@ app.post("/speechProxy", async (req, res) => {
       apiBody[scriptedTextField] = text;
     }
 
-    // For scripted, send only whitelisted fields to avoid upstream 422 "Extra inputs are not permitted"
     if (isScripted) {
       apiBody = {
         audio_base64: apiBody.audio_base64,
@@ -64,7 +63,13 @@ app.post("/speechProxy", async (req, res) => {
       };
     }
 
-    // Keep lc-beta-features false so we get the same response as Postman: includes "reading" and metadata.content_relevance
+    if (!apiBody.audio_base64 || !apiBody.audio_format) {
+      res.set("Access-Control-Allow-Origin", "*");
+      return res.status(400).json({
+        error: "Missing required fields: audio_base64, audio_format",
+      });
+    }
+
     const response = await fetch(targetEndpoint, {
       method: "POST",
       headers: {
@@ -84,5 +89,273 @@ app.post("/speechProxy", async (req, res) => {
   }
 });
 
+// ---------- Azure Speech REST proxy ----------------------------------------
+const FORMAT_TO_CONTENT_TYPE = {
+  webm: "audio/webm; codecs=opus",
+  ogg: "audio/ogg; codecs=opus",
+  wav: "audio/wav; codecs=audio/pcm; samplerate=16000",
+  mp3: "audio/mpeg",
+};
+
+function azureKey() {
+  return String(
+    process.env.SPEECH_KEY || process.env.AZURE_SPEECH_KEY || process.env.Key || ""
+  ).trim();
+}
+function azureRegion() {
+  return String(
+    process.env.SPEECH_REGION ||
+      process.env.AZURE_SPEECH_REGION ||
+      process.env.AZURE_REGION ||
+      process.env.Region ||
+      ""
+  ).trim();
+}
+function azureLanguage() {
+  return String(process.env.AZURE_SPEECH_LANGUAGE || "en-US").trim();
+}
+
+function buildPronunciationHeader(referenceText) {
+  return Buffer.from(
+    JSON.stringify({
+      ReferenceText: referenceText,
+      GradingSystem: "HundredMark",
+      Granularity: "Phoneme",
+      Dimension: "Comprehensive",
+      EnableMiscue: "True",
+    }),
+    "utf8"
+  ).toString("base64");
+}
+
+async function postToAzure({ audio, contentType, key, region, language, paHeader }) {
+  const url =
+    `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1` +
+    `?language=${encodeURIComponent(language)}&format=detailed`;
+  const headers = {
+    "Ocp-Apim-Subscription-Key": key,
+    "Content-Type": contentType,
+    Accept: "application/json",
+  };
+  if (paHeader) headers["Pronunciation-Assessment"] = paHeader;
+
+  const resp = await fetch(url, { method: "POST", headers, body: audio });
+  const text = await resp.text();
+  let json;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    json = { raw: text };
+  }
+  return { status: resp.status, json };
+}
+
+// Two-pass for unscripted (REST API only scores against a known reference text).
+async function callAzureSpeech({ audio, contentType, referenceText, key, region, language }) {
+  if (referenceText && referenceText.trim()) {
+    return postToAzure({
+      audio,
+      contentType,
+      key,
+      region,
+      language,
+      paHeader: buildPronunciationHeader(referenceText.trim()),
+    });
+  }
+  const recog = await postToAzure({ audio, contentType, key, region, language });
+  if (recog.status >= 400) return recog;
+  const displayText = recog.json?.DisplayText || "";
+  const cleaned = String(displayText).replace(/[.!?]+$/g, "").trim();
+  if (!cleaned) return recog;
+  const scored = await postToAzure({
+    audio,
+    contentType,
+    key,
+    region,
+    language,
+    paHeader: buildPronunciationHeader(cleaned),
+  });
+  if (scored.status >= 400) return recog;
+  if (scored.json && !scored.json.DisplayText && displayText) {
+    scored.json.DisplayText = displayText;
+  }
+  return scored;
+}
+
+function mapAzureToLcShape(azure, { isScripted, expectedText, audioFormat }) {
+  const recStatus = azure?.RecognitionStatus || "Unknown";
+  const displayText = azure?.DisplayText || "";
+  const nbest = azure?.NBest?.[0] || {};
+  const pa = nbest.PronunciationAssessment || {};
+  const wordsRaw = nbest.Words || [];
+
+  const accuracy = pa.AccuracyScore ?? null;
+  const fluencyScore = pa.FluencyScore ?? null;
+  const completeness = pa.CompletenessScore ?? null;
+  const pron = pa.PronScore ?? null;
+  const overall = pron ?? accuracy ?? null;
+
+  const words = wordsRaw.map((w) => {
+    const wpa = w.PronunciationAssessment || {};
+    const phonemes = (w.Phonemes || []).map((p) => {
+      const ppa = p.PronunciationAssessment || {};
+      return { phoneme: p.Phoneme || "", phoneme_score: ppa.AccuracyScore ?? null };
+    });
+    return {
+      word_text: w.Word || "",
+      word_score: wpa.AccuracyScore ?? null,
+      error_type: wpa.ErrorType ?? "None",
+      phonemes,
+    };
+  });
+
+  const out = {
+    pronunciation: {
+      overall_score: pron,
+      ...(isScripted && expectedText ? { expected_text: expectedText } : {}),
+      words,
+    },
+    fluency: {
+      overall_score: fluencyScore,
+      metrics: { speech_rate: null, pauses: null, filler_words: null },
+      feedback: {},
+    },
+    overall: {
+      overall_score: overall,
+      english_proficiency_scores: {
+        mock_ielts: { prediction: null },
+        mock_cefr: { prediction: null },
+        mock_pte: { prediction: null },
+      },
+    },
+    warnings: [],
+    metadata: {
+      provider: "azure",
+      recognition_status: recStatus,
+      predicted_text: displayText,
+      content_relevance: 0,
+      audio_format: audioFormat,
+      ...(isScripted && expectedText ? { reference_text: expectedText } : {}),
+    },
+    pronunciation_score: pron,
+    fluency_score: fluencyScore,
+    overall_score: overall,
+  };
+
+  if (isScripted) {
+    out.reading = {
+      accuracy: accuracy != null ? accuracy / 100 : null,
+      completion: completeness != null ? completeness / 100 : null,
+      accuracy_score: accuracy,
+      completeness_score: completeness,
+    };
+  }
+
+  return out;
+}
+
+app.get("/azureSpeechProxy", (req, res) => {
+  res.set("Access-Control-Allow-Origin", "*");
+  res.json({
+    function: "azureSpeechProxy (local)",
+    node_version: process.version,
+    env: {
+      SPEECH_KEY: !!azureKey(),
+      SPEECH_REGION: azureRegion() || null,
+      AZURE_SPEECH_LANGUAGE: azureLanguage(),
+    },
+    usage: 'POST { "audio_base64": "<base64>", "audio_format": "webm|ogg|wav|mp3", "expected_text": "<optional>" }',
+  });
+});
+
+app.post("/azureSpeechProxy", async (req, res) => {
+  res.set("Access-Control-Allow-Origin", "*");
+  try {
+    const { endpoint: _e, expected_text: expectedText, mode, ...rest } = req.body || {};
+
+    if (mode === "info") {
+      return res.json({
+        function: "azureSpeechProxy (local)",
+        env: { SPEECH_KEY: !!azureKey(), SPEECH_REGION: azureRegion() || null },
+      });
+    }
+
+    const key = azureKey();
+    const region = azureRegion();
+    const language = azureLanguage();
+    if (!key || !region) {
+      return res.status(500).json({
+        error: "Missing Azure config",
+        details: "Set SPEECH_KEY and SPEECH_REGION in .env",
+      });
+    }
+
+    const audioBase64 = rest.audio_base64;
+    const audioFormat = String(rest.audio_format || "").toLowerCase();
+    if (!audioBase64 || !audioFormat) {
+      return res.status(400).json({ error: "Missing required fields: audio_base64, audio_format" });
+    }
+    const contentType = FORMAT_TO_CONTENT_TYPE[audioFormat];
+    if (!contentType) {
+      return res.status(400).json({
+        error: `Unsupported audio_format "${audioFormat}"`,
+        supported: Object.keys(FORMAT_TO_CONTENT_TYPE),
+      });
+    }
+
+    const targetEndpoint = req.query.endpoint || _e || "";
+    let isScripted =
+      typeof targetEndpoint === "string" && targetEndpoint.includes("speech-assessment/scripted");
+
+    let referenceText = "";
+    if (isScripted && expectedText != null) {
+      let text = String(expectedText);
+      if (text.length >= 2 && text.startsWith('"') && text.endsWith('"')) {
+        try {
+          const unquoted = JSON.parse(text);
+          if (typeof unquoted === "string") text = unquoted;
+        } catch (_) {}
+      }
+      if (text.trim().length > 300) isScripted = false;
+      else referenceText = text;
+    }
+
+    const audio = Buffer.from(audioBase64, "base64");
+    const { status, json: azureJson } = await callAzureSpeech({
+      audio,
+      contentType,
+      referenceText,
+      key,
+      region,
+      language,
+    });
+
+    if (status >= 400) {
+      console.error("[azureSpeechProxy local] Azure", status, JSON.stringify(azureJson).slice(0, 800));
+      return res.status(502).json({
+        error: "Azure Speech REST returned " + status,
+        azure_status: status,
+        azure_response: azureJson,
+      });
+    }
+
+    const lcShaped = mapAzureToLcShape(azureJson, {
+      isScripted,
+      expectedText: referenceText,
+      audioFormat,
+    });
+
+    console.log("[azureSpeechProxy local] LC-shaped Azure JSON response:\n" + JSON.stringify(lcShaped, null, 2));
+    return res.json(lcShaped);
+  } catch (err) {
+    console.error("Azure Speech Proxy Error:", err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`🚀 Speech Proxy server running on http://localhost:${PORT}`));
+app.listen(PORT, () =>
+  console.log(
+    `Speech Proxy on http://localhost:${PORT}\n  POST /speechProxy        Language Confidence\n  POST /azureSpeechProxy   Azure (REST)\n  GET  /azureSpeechProxy?mode=info`
+  )
+);

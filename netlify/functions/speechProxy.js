@@ -1,7 +1,10 @@
 /**
  * Netlify Function - Speech Proxy
- * Proxies requests to Language Confidence API
+ * Proxies requests to the Language Confidence API.
  * Full parity with DigitalOcean speechProxy (scripted/unscripted, expected_text, etc.)
+ *
+ * To use Azure: deploy the dedicated `azureSpeechProxy` function and point the frontend at it
+ * via VITE_SPEECH_PROXY_FUNCTION / VITE_SPEECH_PROXY_URL.
  */
 
 exports.handler = async (event) => {
@@ -64,11 +67,19 @@ exports.handler = async (event) => {
 
     // Netlify: query params from event.queryStringParameters
     const query = event.queryStringParameters || {};
-    const targetEndpoint =
+    let targetEndpoint =
       query.endpoint ||
       body.endpoint ||
       'https://apis.languageconfidence.ai/speech-assessment/unscripted/uk';
-    const isScripted = typeof targetEndpoint === 'string' && targetEndpoint.includes('speech-assessment/scripted');
+    let isScripted = typeof targetEndpoint === 'string' && targetEndpoint.includes('speech-assessment/scripted');
+
+    if (isScripted && expectedText != null) {
+      const textForLength = String(expectedText).trim();
+      if (textForLength.length > 300) {
+        targetEndpoint = targetEndpoint.replace('/scripted/', '/unscripted/');
+        isScripted = false;
+      }
+    }
 
     // Scripted: use the field name the API accepts (LC scripted/uk = "expected_text")
     const scriptedTextField = process.env.LC_SCRIPT_FIELD || 'expected_text';

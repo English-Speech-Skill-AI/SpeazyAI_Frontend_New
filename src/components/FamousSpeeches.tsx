@@ -20,7 +20,7 @@ import { motion } from "motion/react";
 import { useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useLocalizedNavigate } from "./LocaleLayout";
-import { AudioRecorder } from "./audioRecorder";
+import { AzureAudioRecorder } from "./azure/AzureAudioRecorder";
 
 interface FamousSpeechesProps {
   onBack?: () => void;
@@ -633,10 +633,9 @@ export function FamousSpeeches({
                 </CardHeader>
 
                 <CardContent>
-                  <AudioRecorder 
+                  <AzureAudioRecorder
                     expectedText={selectedSpeech.kidFriendlyText}
                     lessonColor={selectedSpeech.gradient}
-                    endpoint="https://apis.languageconfidence.ai/speech-assessment/scripted/uk"
                     onApiResponse={handleApiResponse}
                   />
                 </CardContent>

@@ -1,0 +1,214 @@
+{
+  "info": {
+    "_postman_id": "9a37cf6a-4b3e-4d18-8f1a-2c4d3e5b6f01",
+    "name": "Speech Skills AI - DigitalOcean Azure Speech Proxy",
+    "description": "Run requests in order. Each request stores parsed JSON in collection variable `lastParsedBody` and logs to Postman Console.\n\n1. **Health check** - GET ?mode=info. Confirms function loads, lists env presence and dependency status.\n2. **Validation** - POST {} - expect 400 with our 'Missing required fields' message.\n3. **Unscripted POST** - real audio, no reference text.\n4. **Scripted POST** - real audio + expected_text, with endpoint query.\n\nIf request 1 returns the generic gateway error, the function failed to start - usually because node_modules was not deployed.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "speechProxyUrl",
+      "value": "https://faas-blr1-8177d592.doserverless.co/api/v1/web/fn-a38d3580-f602-4111-8967-d449fc5ef00e/default/azureSpeechProxy",
+      "type": "string"
+    },
+    {
+      "key": "speechProxyUrlLocal",
+      "value": "http://localhost:4000/azureSpeechProxy",
+      "type": "string"
+    },
+    {
+      "key": "audio_format",
+      "value": "webm",
+      "type": "string"
+    },
+    {
+      "key": "audio_base64",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "expected_text_scripted",
+      "value": "Hello world",
+      "type": "string"
+    },
+    {
+      "key": "lastParsedBody",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "var raw = pm.response.text();",
+          "var parsed;",
+          "try {",
+          "  parsed = JSON.parse(raw);",
+          "  if (parsed && typeof parsed.body === 'string') {",
+          "    try { parsed = JSON.parse(parsed.body); } catch (e) {}",
+          "  }",
+          "  pm.collectionVariables.set('lastParsedBody', JSON.stringify(parsed));",
+          "  console.log('Status:', pm.response.code);",
+          "  console.log('Parsed JSON:', parsed);",
+          "} catch (e) {",
+          "  console.log('Status:', pm.response.code);",
+          "  console.log('Raw (non-JSON):', raw.slice(0, 1000));",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "DigitalOcean - azureSpeechProxy",
+      "item": [
+        {
+          "name": "01 GET health (mode=info)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Function reachable (200)', function () {",
+                  "  pm.expect(pm.response.code).to.eql(200);",
+                  "});",
+                  "var b = pm.collectionVariables.get('lastParsedBody');",
+                  "if (b) {",
+                  "  var p; try { p = JSON.parse(b); } catch (e) {}",
+                  "  if (p && p.dependencies) {",
+                  "    pm.test('Speech SDK loaded', function () {",
+                  "      pm.expect(String(p.dependencies.speechSdk)).to.match(/^loaded/);",
+                  "    });",
+                  "    pm.test('ffmpeg-static loaded', function () {",
+                  "      pm.expect(String(p.dependencies.ffmpegStatic)).to.match(/^loaded/);",
+                  "    });",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{speechProxyUrl}}?mode=info",
+              "host": ["{{speechProxyUrl}}"],
+              "query": [{ "key": "mode", "value": "info" }]
+            },
+            "description": "No audio, no Azure call. Confirms function loaded and which env vars / deps are present.\n\nIf this returns the DigitalOcean gateway error `{ code: ..., error: 'There was an error processing your request.' }`, the function crashes at import. Most common cause: deployed without node_modules. Re-deploy from `digitalocean/functions` after `npm install` (Linux runner recommended)."
+          },
+          "response": []
+        },
+        {
+          "name": "02 POST validation (empty body, expect 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Validation 400', function () {",
+                  "  pm.expect(pm.response.code).to.eql(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{}", "options": { "raw": { "language": "json" } } },
+            "url": "{{speechProxyUrl}}"
+          },
+          "response": []
+        },
+        {
+          "name": "03 POST unscripted (real audio)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var b = pm.collectionVariables.get('audio_base64');",
+                  "if (!b || !String(b).trim()) {",
+                  "  console.warn('audio_base64 is empty - request will return 400. Set the collection variable to base64 bytes of a webm/wav clip.');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"audio_base64\": \"{{audio_base64}}\",\n  \"audio_format\": \"{{audio_format}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{speechProxyUrl}}",
+            "description": "Set `audio_base64` collection variable first.\n\nPowerShell to generate it from a recording:\n[Convert]::ToBase64String([IO.File]::ReadAllBytes('clip.webm'))"
+          },
+          "response": []
+        },
+        {
+          "name": "04 POST scripted (real audio + expected_text)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"audio_base64\": \"{{audio_base64}}\",\n  \"audio_format\": \"{{audio_format}}\",\n  \"expected_text\": \"{{expected_text_scripted}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{speechProxyUrl}}?endpoint=https%3A%2F%2Fapis.languageconfidence.ai%2Fspeech-assessment%2Fscripted%2Fuk",
+              "host": ["{{speechProxyUrl}}"],
+              "query": [
+                {
+                  "key": "endpoint",
+                  "value": "https%3A%2F%2Fapis.languageconfidence.ai%2Fspeech-assessment%2Fscripted%2Fuk"
+                }
+              ]
+            },
+            "description": "The `endpoint` query param mirrors the web app and tells the proxy this is **scripted** (treats `expected_text` as reference). The proxy still calls **Azure**; the LC URL in the query is just a flag."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Local - npm run proxy:speech",
+      "item": [
+        {
+          "name": "GET health (localhost)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{speechProxyUrlLocal}}?mode=info"
+          },
+          "response": []
+        },
+        {
+          "name": "POST unscripted (localhost)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"audio_base64\": \"{{audio_base64}}\",\n  \"audio_format\": \"{{audio_format}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{speechProxyUrlLocal}}"
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

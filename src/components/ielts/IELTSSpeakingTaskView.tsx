@@ -5,6 +5,7 @@ import { ArrowLeft, Play, Pause, Clock, Loader2, Mic, X } from 'lucide-react';
 import { IELTSAudioRecorder } from './IELTSAudioRecorder';
 import { IELTSQuestionRecorder } from './IELTSQuestionRecorder';
 import { API_URLS, getSpeechProxyUrl } from '@/config/apiConfig';
+import { speechProxyResponseJson } from '@/utils/normalizeSpeechProxyResponse';
 
 interface SpeakingQuestion {
   question_number: number;
@@ -505,7 +506,7 @@ export function IELTSSpeakingTaskView() {
           throw new Error(`API error: ${response.status} ${errorText}`);
         }
 
-        const result = await response.json();
+        const result = await speechProxyResponseJson(response);
         const predictedText = result?.metadata?.predicted_text || result?.predicted_text || '';
         
         if (predictedText) {
@@ -573,7 +574,7 @@ export function IELTSSpeakingTaskView() {
           });
 
           if (response && response.ok) {
-            const result = await response.json();
+            const result = await speechProxyResponseJson(response);
             const predictedText = result?.metadata?.predicted_text || result?.predicted_text || '';
             
             if (predictedText) {
@@ -651,11 +652,29 @@ export function IELTSSpeakingTaskView() {
       }
       const proxyUrl = API_URLS.chatgptProxy;
 
-      // Get additional info from speech assessment result
-      const fluencyScore = speechAssessmentResult?.fluency_score || 0;
-      const pronunciationScore = speechAssessmentResult?.pronunciation_score || 0;
-      const overallScore = speechAssessmentResult?.overall_score || 0;
-      const wordScores = speechAssessmentResult?.word_scores || [];
+      // Get additional info from speech assessment result (flat LC/Azure aliases + nested LC shape)
+      const fluencyScore =
+        speechAssessmentResult?.fluency_score ??
+        speechAssessmentResult?.fluency?.overall_score ??
+        0;
+      const pronunciationScore =
+        speechAssessmentResult?.pronunciation_score ??
+        speechAssessmentResult?.pronunciation?.overall_score ??
+        0;
+      const overallScore =
+        speechAssessmentResult?.overall_score ??
+        speechAssessmentResult?.overall?.overall_score ??
+        0;
+      const wordsArr = speechAssessmentResult?.pronunciation?.words;
+      const wordScores =
+        speechAssessmentResult?.word_scores?.length > 0
+          ? speechAssessmentResult.word_scores
+          : Array.isArray(wordsArr)
+            ? wordsArr.map((w: { word_text?: string; word_score?: number }) => ({
+                word: w.word_text,
+                score: w.word_score,
+              }))
+            : [];
 
       const prompt = `You are a strict IELTS Speaking examiner following official IELTS Speaking band descriptors EXACTLY. Assess this response with the same rigor as an official IELTS examiner would.
 

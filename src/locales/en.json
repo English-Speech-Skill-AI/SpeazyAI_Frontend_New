@@ -65,6 +65,8 @@
     "ieltsDesc": "Complete IELTS test preparation",
     "aiTutor": "AI Tutor",
     "aiTutorDesc": "Get personalized coaching",
+    "azureSpeech": "Azure Speech",
+    "azureSpeechDesc": "Test Azure pronunciation assessment",
     "melloWelcome": "Hi! Welcome back, {{name}}!",
     "melloStreak": "You're on a {{count}}-day streak! Keep it up! 👋🎉",
     "melloReady": "Ready to start your learning journey? 👋",

@@ -1,5 +1,7 @@
 // DigitalOcean Serverless Function - Speech Proxy
-// Proxies requests to Language Confidence API
+// Proxies requests to the Language Confidence API.
+// To use Azure instead, point the frontend at the dedicated `azureSpeechProxy` function;
+// that switch is configured via env (see VITE_SPEECH_PROXY_FUNCTION / VITE_SPEECH_PROXY_URL).
 
 export async function main(event) {
   const method = event?.__ow_method || event?.http?.method || event?.method || "POST";

@@ -4,8 +4,9 @@ This folder contains proxy functions for DigitalOcean deployment, converted from
 
 ## Structure
 
-- `functions/` - Serverless function versions (for DigitalOcean Functions)
-  - `speechProxy.js` - Proxies requests to Language Confidence API
+- `functions/` - Serverless function versions (for DigitalOcean Functions). All files here are **self-contained, single-file** functions you can paste directly into the DO web editor. No `npm install` step.
+  - `speechProxy.js` - Proxies to Language Confidence
+  - `azureSpeechProxy.js` - **Azure Speech REST API** pronunciation assessment (same request shape as `speechProxy`, returns LC-shaped JSON). Set `SPEECH_KEY`, `SPEECH_REGION`, optional `AZURE_SPEECH_LANGUAGE` env vars. Bump function timeout to ≥ 30s.
   - `chatgptProxy.js` - Proxies requests to OpenAI ChatGPT API
   - `authProxy.js` - Proxies authentication requests
   - `pdfProxy.js` - Proxies PDF file requests

@@ -7,6 +7,7 @@ import { useState, useRef, useEffect } from "react"
 import { useTranslation } from "react-i18next"
 import { useLanguage } from "./LocaleLayout"
 import { API_URLS, getSpeechProxyUrl } from '@/config/apiConfig';
+import { speechProxyResponseJson } from "@/utils/normalizeSpeechProxyResponse";
 import { Card, CardHeader, CardContent, CardTitle } from "./ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog"
 import { Mic, BookOpen, AlertTriangle, Volume2, Award, Brain, Square, Play, Pause, LayoutDashboard, ChevronDown, BookText } from "lucide-react"
@@ -45,6 +46,12 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
   const [vocabularySynonyms, setVocabularySynonyms] = useState<string>("")
   const [loadingVocabularySynonyms, setLoadingVocabularySynonyms] = useState(false)
   const vocabularySynonymsFetchedRef = useRef(false)
+  // Azure does not return IELTS / CEFR predictions, so for Azure-provider responses we ask
+  // ChatGPT to predict them from the rich Azure pronunciation/fluency/prosody breakdown.
+  const [predictedIelts, setPredictedIelts] = useState<string | null>(null)
+  const [predictedCefr, setPredictedCefr] = useState<string | null>(null)
+  const [loadingProficiency, setLoadingProficiency] = useState(false)
+  const proficiencyFetchedRef = useRef(false)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -130,6 +137,78 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
       controller.abort()
     }
   }, [metadata.predicted_text, pronunciation.expected_text])
+
+  // Azure-provider responses don't carry IELTS / CEFR predictions. Ask ChatGPT to estimate
+  // them from the Azure scores so the sidebar shows real-looking levels instead of dashes.
+  useEffect(() => {
+    if (proficiencyFetchedRef.current) return
+    if (metadata?.provider !== "azure") return
+    const existingIelts = overall?.english_proficiency_scores?.mock_ielts?.prediction
+    const existingCefr = overall?.english_proficiency_scores?.mock_cefr?.prediction
+    if (existingIelts && existingCefr) return
+    const pron = pronunciation?.overall_score
+    if (pron == null) return
+    proficiencyFetchedRef.current = true
+
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 20000)
+    const run = async () => {
+      setLoadingProficiency(true)
+      try {
+        const proxyUrl = API_URLS.chatgptProxy
+        const summary = {
+          pronunciation_score: pronunciation?.overall_score ?? null,
+          accuracy_score: pronunciation?.accuracy_score ?? null,
+          fluency_score: fluency?.overall_score ?? null,
+          completeness_score: pronunciation?.completeness_score ?? null,
+          prosody_score: pronunciation?.prosody_score ?? null,
+          words_read: pronunciation?.words?.length ?? 0,
+          predicted_text: (metadata?.predicted_text || "").slice(0, 800),
+        }
+        const resp = await fetch(proxyUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mode: "chat",
+            messages: [
+              {
+                role: "system",
+                content:
+                  "You are an English language assessment expert. Given a learner's Azure Speech pronunciation assessment scores, estimate their approximate IELTS speaking band (between 1.0 and 9.0, in 0.5 increments) and CEFR level (one of A1, A2, B1, B2, C1, C2). Higher Azure scores map to higher IELTS / CEFR. Return ONLY a single-line JSON object with two string keys: \"ielts\" and \"cefr\". No markdown, no explanation, no extra text.",
+              },
+              {
+                role: "user",
+                content: `Azure pronunciation assessment: ${JSON.stringify(summary)}`,
+              },
+            ],
+          }),
+          signal: controller.signal,
+        })
+        clearTimeout(timeoutId)
+        if (!resp.ok) return
+        const json = await resp.json().catch(() => ({}))
+        const raw = (json?.response ?? json?.content ?? json?.message ?? "").trim()
+        // Tolerate accidental wrapping (markdown fences, prose around the JSON, etc.)
+        const match = raw.match(/\{[\s\S]*\}/)
+        if (!match) return
+        let parsed: any = null
+        try { parsed = JSON.parse(match[0]) } catch { return }
+        const ielts = typeof parsed?.ielts === "number" ? parsed.ielts.toFixed(1) : String(parsed?.ielts || "").trim()
+        const cefr = String(parsed?.cefr || "").trim().toUpperCase()
+        if (ielts) setPredictedIelts(ielts)
+        if (cefr) setPredictedCefr(cefr)
+      } catch {
+        clearTimeout(timeoutId)
+      } finally {
+        setLoadingProficiency(false)
+      }
+    }
+    run()
+    return () => {
+      clearTimeout(timeoutId)
+      controller.abort()
+    }
+  }, [metadata?.provider, pronunciation?.overall_score, pronunciation?.accuracy_score, pronunciation?.completeness_score, pronunciation?.prosody_score, fluency?.overall_score])
 
   // Auto-fetch grammar tip when user opens Grammar tab (once per results load)
   useEffect(() => {
@@ -369,10 +448,13 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
     }
   }, [pronunciation.words])
 
-  const wordScores = (pronunciation.words || []).map((w: { word_text: any; word_score: any; phonemes?: any[] }) => ({
+  const wordScores = (pronunciation.words || []).map((w: any) => ({
     name: w.word_text,
     score: w.word_score,
     phonemes: w.phonemes || [], // API-returned phonemes for this word
+    syllables: w.syllables || [], // Azure: syllable-level scores
+    error_type: w.error_type || null, // Azure: None | Mispronunciation | Omission | Insertion
+    feedback: w.feedback || null, // Azure: prosody / break / intonation feedback
   }))
 
   const getScoreColor = (score: number) => {
@@ -417,12 +499,12 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
 
     // If we don't have per-word scores from the API, just render the verified/predicted words with score=0
     if (wordScores.length === 0) {
-      return displayWords.map((w) => ({ name: w, score: 0, phonemes: [] }))
+      return displayWords.map((w) => ({ name: w, score: 0, phonemes: [], syllables: [], error_type: null, feedback: null }))
     }
 
     // Try to map display words to the API's wordScores (best-effort sequential match).
     // If we can't find a match, keep score=0 and no phoneme data.
-    const out: Array<{ name: string; score: number; phonemes: any[] }> = []
+    const out: Array<{ name: string; score: number; phonemes: any[]; syllables: any[]; error_type: string | null; feedback: any }> = []
     let wsIdx = 0
     const lookahead = 12
 
@@ -443,10 +525,13 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
           name: w,
           score: wordScores[matchIdx].score,
           phonemes: wordScores[matchIdx].phonemes || [],
+          syllables: wordScores[matchIdx].syllables || [],
+          error_type: wordScores[matchIdx].error_type || null,
+          feedback: wordScores[matchIdx].feedback || null,
         })
         wsIdx = matchIdx + 1
       } else {
-        out.push({ name: w, score: 0, phonemes: [] })
+        out.push({ name: w, score: 0, phonemes: [], syllables: [], error_type: null, feedback: null })
       }
     }
 
@@ -526,17 +611,7 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
         throw new Error(`API Error (${response.status}): ${errorText}`)
       }
 
-      let apiData = await response.json()
-      // Unwrap proxy response (DO returns { body }, local may return directly)
-      if (apiData && typeof apiData.body === "string") {
-        try {
-          apiData = JSON.parse(apiData.body)
-        } catch (_) {}
-      } else if (apiData && typeof apiData.body === "object" && apiData.body !== null) {
-        apiData = apiData.body
-      } else if (apiData && typeof apiData.data === "object" && apiData.data !== null) {
-        apiData = apiData.data
-      }
+      const apiData = await speechProxyResponseJson(response)
       const pronunciationScore = apiData?.pronunciation?.overall_score
 
       if (pronunciationScore !== undefined && pronunciationScore !== null) {
@@ -724,10 +799,27 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
       }
     }
     
-    const handleLoadedMetadata = () => {
-      if (audio) {
+    // Chromium reports `Infinity` for WebM blobs produced by MediaRecorder until the audio is
+    // fully scanned. Seeking to a huge offset forces the browser to compute the real duration,
+    // which then surfaces via `durationchange`. We seek back to 0 once we have it.
+    const fixWebmDuration = () => {
+      if (!Number.isFinite(audio.duration)) {
+        const onDurationChange = () => {
+          if (Number.isFinite(audio.duration)) {
+            setDuration(audio.duration)
+            audio.currentTime = 0
+            audio.removeEventListener('durationchange', onDurationChange)
+          }
+        }
+        audio.addEventListener('durationchange', onDurationChange)
+        try { audio.currentTime = Number.MAX_SAFE_INTEGER } catch { /* noop */ }
+      } else {
         setDuration(audio.duration)
       }
+    }
+
+    const handleLoadedMetadata = () => {
+      if (audio) fixWebmDuration()
     }
     
     const handleEnded = () => {
@@ -819,11 +911,21 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
     }
     
     const handleLoadedMetadata = () => {
-      if (audio) {
-        const dur = audio.duration
-        if (dur && !isNaN(dur) && dur !== Infinity) {
-          setPracticeDuration(dur)
+      if (!audio) return
+      // Same Chromium WebM `Infinity` workaround used for the main playback element.
+      const dur = audio.duration
+      if (Number.isFinite(dur) && dur > 0) {
+        setPracticeDuration(dur)
+      } else {
+        const onDurationChange = () => {
+          if (Number.isFinite(audio.duration)) {
+            setPracticeDuration(audio.duration)
+            audio.currentTime = 0
+            audio.removeEventListener('durationchange', onDurationChange)
+          }
         }
+        audio.addEventListener('durationchange', onDurationChange)
+        try { audio.currentTime = Number.MAX_SAFE_INTEGER } catch { /* noop */ }
       }
     }
     
@@ -871,6 +973,8 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
   const hasGrammarData = grammar && Object.keys(grammar).length > 0 && grammar.overall_score !== undefined && grammar.overall_score !== null
   const grammarScore = hasGrammarData ? Math.round(grammar.overall_score || 0) : 100
   const grammarOverallScore = hasGrammarData ? (grammar.overall_score ?? 0) : 100
+
+  const isAzureProvider = metadata?.provider === "azure"
 
   const navigationItems = [
     { id: "pronunciation" as NavigationItem, label: t("speechResults.pronunciation"), icon: Mic, score: Math.round(pronunciation.overall_score || 0) },
@@ -1137,7 +1241,7 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
                   color: "#1f2937",
                 }}
               >
-                IELTS {overall.english_proficiency_scores?.mock_ielts?.prediction || "-"}
+                IELTS {predictedIelts || overall.english_proficiency_scores?.mock_ielts?.prediction || (loadingProficiency ? "…" : "-")}
               </span>
               <span style={{ color: "#9ca3af" }}>•</span>
               <span 
@@ -1147,7 +1251,7 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
                   color: "#1f2937",
                 }}
               >
-                CEFR {overall.english_proficiency_scores?.mock_cefr?.prediction || "-"}
+                CEFR {predictedCefr || overall.english_proficiency_scores?.mock_cefr?.prediction || (loadingProficiency ? "…" : "-")}
               </span>
             </div>
           </div>
@@ -1190,6 +1294,56 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
               </CardTitle>
             </CardHeader>
             <CardContent style={{ padding: "24px" }}>
+              {/* Azure pronunciation sub-scores strip — renders only when Azure provided
+                  the richer accuracy / completeness / prosody breakdown. LC responses skip this
+                  because they don't carry these fields and the same scores are already in the
+                  sidebar nav. */}
+              {(() => {
+                const accuracy = pronunciation.accuracy_score
+                const completeness = pronunciation.completeness_score
+                const prosody = pronunciation.prosody_score
+                const fluencyOverall = fluency?.overall_score
+                const hasAzureBreakdown =
+                  accuracy != null || completeness != null || prosody != null || metadata?.provider === "azure"
+                if (!hasAzureBreakdown) return null
+                const subScores: { label: string; value: number; color: string }[] = []
+                if (accuracy != null) subScores.push({ label: "Accuracy", value: Math.round(accuracy), color: "#3b82f6" })
+                if (fluencyOverall != null) subScores.push({ label: "Fluency", value: Math.round(fluencyOverall), color: "#10b981" })
+                if (completeness != null) subScores.push({ label: "Completeness", value: Math.round(completeness), color: "#a855f7" })
+                if (prosody != null) subScores.push({ label: "Prosody", value: Math.round(prosody), color: "#f59e0b" })
+                if (subScores.length === 0) return null
+                return (
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: `repeat(${subScores.length}, minmax(0, 1fr))`,
+                      gap: "12px",
+                      marginBottom: "24px",
+                    }}
+                  >
+                    {subScores.map((s) => (
+                      <div
+                        key={s.label}
+                        style={{
+                          textAlign: "center",
+                          padding: "16px 12px",
+                          borderRadius: "12px",
+                          backgroundColor: "#f9fafb",
+                          border: `2px solid ${s.color}33`,
+                        }}
+                      >
+                        <p style={{ fontSize: "12px", color: "#6b7280", margin: "0 0 6px 0", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                          {s.label}
+                        </p>
+                        <p style={{ fontSize: "28px", fontWeight: 700, color: s.color, margin: 0, lineHeight: 1 }}>
+                          {s.value}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })()}
+
               {/* Audio Playback Section */}
               {playbackAudioUrl ? (
                 <div
@@ -1517,6 +1671,73 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
                 </Dialog>
               </div>
 
+              {(() => {
+                const entry: any = findWordScoreEntry(selectedWord)
+                const errorType: string | null = entry?.error_type
+                if (!errorType || errorType === "None") return null
+                const map: Record<string, { bg: string; border: string; color: string; label: string }> = {
+                  Mispronunciation: { bg: "#fee2e2", border: "#ef4444", color: "#991b1b", label: "Mispronunciation" },
+                  Omission: { bg: "#fef3c7", border: "#f59e0b", color: "#92400e", label: "Omission (you skipped this word)" },
+                  Insertion: { bg: "#ede9fe", border: "#8b5cf6", color: "#5b21b6", label: "Insertion (extra word said)" },
+                  UnexpectedBreak: { bg: "#e0f2fe", border: "#0284c7", color: "#075985", label: "Unexpected pause" },
+                  MissingBreak: { bg: "#e0f2fe", border: "#0284c7", color: "#075985", label: "Missing pause" },
+                  Monotone: { bg: "#fce7f3", border: "#ec4899", color: "#9d174d", label: "Monotone" },
+                }
+                const tone = map[errorType] || { bg: "#fef3c7", border: "#f59e0b", color: "#92400e", label: errorType }
+                return (
+                  <div
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "6px 12px",
+                      borderRadius: 9999,
+                      background: tone.bg,
+                      border: `2px solid ${tone.border}`,
+                      color: tone.color,
+                      fontSize: 13,
+                      fontWeight: 600,
+                      marginBottom: 16,
+                    }}
+                  >
+                    <AlertTriangle className="w-4 h-4" />
+                    {tone.label}
+                  </div>
+                )
+              })()}
+
+              {/* Syllable breakdown — Azure-only */}
+              {(() => {
+                const syllables: any[] = findWordScoreEntry(selectedWord)?.syllables || []
+                if (syllables.length === 0) return null
+                return (
+                  <div className="mb-4">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2">Syllables</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {syllables.map((s: any, idx: number) => {
+                        const score = s.score ?? s.PronunciationAssessment?.AccuracyScore
+                        const colors = score != null ? getScoreColor(score) : { bg: "#f3f4f6", border: "#9ca3af", text: "#374151" }
+                        return (
+                          <div
+                            key={idx}
+                            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg"
+                            style={{ backgroundColor: colors.bg, border: `2px solid ${colors.border}`, color: colors.text }}
+                          >
+                            <span className="font-mono font-semibold">{s.syllable || s.Syllable}</span>
+                            {s.grapheme && (
+                              <span className="text-xs opacity-70">({s.grapheme})</span>
+                            )}
+                            {score != null && (
+                              <span className="text-sm font-bold">{Math.round(score)}</span>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })()}
+
               <div className="mb-4">
                 <h4 className="text-sm font-semibold text-gray-700 mb-2">{t("speechResults.phonemes")}</h4>
                 <div className="flex flex-wrap gap-2">
@@ -1531,8 +1752,8 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
                           className="inline-flex items-center gap-2 border border-blue-300 bg-white px-3 py-2 rounded-lg hover:bg-blue-50 transition-colors"
                         >
                           <span className="font-mono text-blue-700">{getPhonemeLabel(p)}</span>
-                          {p.phoneme_score !== undefined && (
-                            <span className="text-sm text-gray-600">({p.phoneme_score})</span>
+                          {p.phoneme_score !== undefined && p.phoneme_score !== null && (
+                            <span className="text-sm text-gray-600">({Math.round(p.phoneme_score)})</span>
                           )}
                         </button>
                       ))
@@ -1541,6 +1762,46 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
                   )}
                 </div>
               </div>
+
+              {/* Prosody / break / monotone feedback per word — Azure-only */}
+              {(() => {
+                const fb = findWordScoreEntry(selectedWord)?.feedback?.Prosody
+                if (!fb) return null
+                const items: { title: string; detail: string; color: string }[] = []
+                const breakInfo = fb.Break
+                if (breakInfo) {
+                  if ((breakInfo.UnexpectedBreak?.Confidence ?? 0) > 0.5) {
+                    items.push({ title: "Unexpected pause", detail: "Try not to pause here.", color: "#0284c7" })
+                  }
+                  if ((breakInfo.MissingBreak?.Confidence ?? 0) > 0.5) {
+                    items.push({ title: "Missing pause", detail: "A short pause here will sound more natural.", color: "#0284c7" })
+                  }
+                  if ((breakInfo.BreakLength ?? 0) > 0) {
+                    items.push({ title: `Pause length: ${Math.round((breakInfo.BreakLength || 0) / 10000)}ms`, detail: "Pause duration before this word.", color: "#6b7280" })
+                  }
+                }
+                const intonation = fb.Intonation
+                if (intonation?.Monotone && (intonation.Monotone.SyllablePitchDeltaConfidence ?? 0) > 0.6) {
+                  items.push({ title: "Monotone delivery", detail: "Vary your pitch a little to sound more expressive.", color: "#ec4899" })
+                }
+                if (items.length === 0) return null
+                return (
+                  <div className="mt-4 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                    <h4 className="text-sm font-semibold text-amber-800 mb-2">Prosody feedback</h4>
+                    <ul className="space-y-1.5 text-sm">
+                      {items.map((it, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <span style={{ color: it.color, fontWeight: 700 }}>•</span>
+                          <span className="text-gray-700">
+                            <span className="font-semibold" style={{ color: it.color }}>{it.title}.</span>{" "}
+                            {it.detail}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )
+              })()}
 
               <div className="mt-4 p-4 bg-white rounded-lg border border-blue-200">
                 <h4 className="text-sm font-semibold text-gray-700 mb-4">{t("speechResults.practicePronunciation")}</h4>
