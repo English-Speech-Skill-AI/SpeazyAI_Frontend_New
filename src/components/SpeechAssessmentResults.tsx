@@ -82,7 +82,16 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
 
   // After we receive results from the Confidence API, send predicted_text + expected_text to ChatGPT
   // to get a clean/verified word list for the pronunciation breakdown UI.
+  //
+  // Azure Speech PA already returns an ordered `pronunciation.words` list that includes insertions
+  // (fillers, extra words) and miscues when miscue detection is on. The ChatGPT verifier tends to
+  // strip disfluencies and "fix" mistakes — which hides exactly what we want to show for Azure.
   useEffect(() => {
+    if (metadata?.provider === "azure") {
+      setVerifiedDisplayWords(null)
+      return
+    }
+
     const predicted = (metadata.predicted_text || "").trim()
     const expected = (pronunciation.expected_text || "").trim()
 
@@ -136,7 +145,7 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
       clearTimeout(timeoutId)
       controller.abort()
     }
-  }, [metadata.predicted_text, pronunciation.expected_text])
+  }, [metadata.predicted_text, pronunciation.expected_text, metadata?.provider])
 
   // Azure-provider responses don't carry IELTS / CEFR predictions. Ask ChatGPT to estimate
   // them from the Azure scores so the sidebar shows real-looking levels instead of dashes.
@@ -495,11 +504,24 @@ export function SpeechAssessmentResults({ data, audioUrl: propAudioUrl }) {
     const predictedWords = getPredictedTextArray()
     const displayWords = (verifiedDisplayWords && verifiedDisplayWords.length > 0) ? verifiedDisplayWords : predictedWords
 
-    if (displayWords.length === 0) return []
+    if (displayWords.length === 0 && !(metadata?.provider === "azure" && wordScores.length > 0)) return []
 
     // If we don't have per-word scores from the API, just render the verified/predicted words with score=0
     if (wordScores.length === 0) {
       return displayWords.map((w) => ({ name: w, score: 0, phonemes: [], syllables: [], error_type: null, feedback: null }))
+    }
+
+    // Azure: use the service word order verbatim (includes Insertion / Mispronunciation / Omission).
+    // Do not run words through ChatGPT cleanup or fuzzy transcript matching.
+    if (metadata?.provider === "azure") {
+      return wordScores.map((w: any) => ({
+        name: w.name,
+        score: w.score,
+        phonemes: w.phonemes || [],
+        syllables: w.syllables || [],
+        error_type: w.error_type ?? null,
+        feedback: w.feedback ?? null,
+      }))
     }
 
     // Try to map display words to the API's wordScores (best-effort sequential match).

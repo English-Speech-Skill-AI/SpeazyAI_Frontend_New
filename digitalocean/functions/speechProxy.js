@@ -3,6 +3,30 @@
 // To use Azure instead, point the frontend at the dedicated `azureSpeechProxy` function;
 // that switch is configured via env (see VITE_SPEECH_PROXY_FUNCTION / VITE_SPEECH_PROXY_URL).
 
+function parseDoQuery(event) {
+  let query = event?.__ow_query ?? event?.http?.query ?? event?.query ?? {};
+  if (typeof query === "string") {
+    const q = {};
+    for (const p of query.split("&")) {
+      const i = p.indexOf("=");
+      const k = i >= 0 ? decodeURIComponent(p.slice(0, i).replace(/\+/g, " ")) : decodeURIComponent(p.replace(/\+/g, " "));
+      const v = i >= 0 ? decodeURIComponent((p.slice(i + 1) || "").replace(/\+/g, " ")) : "";
+      if (k) q[k] = v;
+    }
+    query = q;
+  }
+  return query || {};
+}
+
+function speechProxyInfoBody() {
+  const key = String(process.env.LC_API_KEY || process.env.SPEECH_API_KEY || "").trim();
+  return JSON.stringify({
+    function: "speechProxy",
+    lcApiKeyConfigured: Boolean(key),
+    hint: "If the client sees { code, error: \"There was an error processing your request.\" }, that is the DigitalOcean gateway (crash, cold-start, timeout, or memory). Raise function timeout (≥30s), memory (≥256MB), then check Activations/Logs.",
+  });
+}
+
 export async function main(event) {
   const method = event?.__ow_method || event?.http?.method || event?.method || "POST";
 
@@ -13,6 +37,17 @@ export async function main(event) {
   const inHeaders = event?.__ow_headers || event?.http?.headers || event?.headers || {};
 
   try {
+    const query = parseDoQuery(event);
+
+    // No audio — confirms the function loads (contrast with DO gateway JSON on crash/timeout).
+    if (method === "GET" && (query.mode === "info" || query.health === "1")) {
+      return {
+        statusCode: 200,
+        headers: { "Content-Type": "application/json" },
+        body: speechProxyInfoBody(),
+      };
+    }
+
     // ---- 1. GET BODY (handle all DO/OpenWhisk variants) ----
     let body = {};
     let raw = event?.__ow_body ?? event?.http?.body ?? event?.body ?? null;
@@ -69,22 +104,18 @@ export async function main(event) {
     }
     body = stripped;
 
+    if (body.mode === "info") {
+      return {
+        statusCode: 200,
+        headers: { "Content-Type": "application/json" },
+        body: speechProxyInfoBody(),
+      };
+    }
+
     // ---- 2. BUILD API BODY (endpoint + expected_text for scripted) ----
     const { endpoint: _e, expected_text: expectedText, script, ...rest } = body;
     let apiBody = { ...rest };
     delete apiBody.script;
-
-    let query = event?.__ow_query ?? event?.http?.query ?? event?.query ?? {};
-    if (typeof query === "string") {
-      const q = {};
-      for (const p of query.split("&")) {
-        const i = p.indexOf("=");
-        const k = i >= 0 ? decodeURIComponent(p.slice(0, i).replace(/\+/g, " ")) : decodeURIComponent(p.replace(/\+/g, " "));
-        const v = i >= 0 ? decodeURIComponent((p.slice(i + 1) || "").replace(/\+/g, " ")) : "";
-        if (k) q[k] = v;
-      }
-      query = q;
-    }
 
     // Endpoint can be in query (URL), in body, or at top-level event (DO may merge params)
     let targetEndpoint =

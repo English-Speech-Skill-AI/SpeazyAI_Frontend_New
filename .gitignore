@@ -1,3 +1,6 @@
 /node_modules
 digitalocean/functions/node_modules
 /.env
+
+# Vite output — never commit: production bundles embed VITE_* secrets (e.g. Azure Speech key).
+/build

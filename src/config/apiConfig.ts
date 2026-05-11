@@ -1,6 +1,10 @@
 // API Configuration - supports DigitalOcean Functions, Netlify Functions, and local dev
 
-const isLocal = import.meta.env.DEV || window.location.hostname === 'localhost';
+/** True only when running the Vite dev server or opening the app from this machine (not a deployed site). */
+const isLocal =
+  import.meta.env.DEV ||
+  (typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'));
 const isNetlify = typeof window !== 'undefined' && window.location.hostname.includes('netlify.app');
 
 // DigitalOcean Function URLs (used when deployed to DigitalOcean App Platform)
@@ -8,8 +12,28 @@ const DO_BASE = 'https://faas-blr1-8177d592.doserverless.co/api/v1/web/fn-a38d35
 // Optional: VITE_SPEECH_PROXY_FUNCTION=azure uses dedicated DO function `azureSpeechProxy` (Azure-only). Override URL entirely with VITE_SPEECH_PROXY_URL.
 const DO_SPEECH_PATH =
   import.meta.env.VITE_SPEECH_PROXY_FUNCTION === 'azure' ? '/azureSpeechProxy' : '/speechProxy';
+const DO_SPEECH_PROXY_FALLBACK = `${DO_BASE}${DO_SPEECH_PATH}`;
+
+/** Production builds sometimes ship with dev .env (VITE_SPEECH_PROXY_URL=http://localhost:4000/...). Never use that from a real site. */
+function sanitizeSpeechProxyUrlForOrigin(candidate: string, fallback: string): string {
+  const s = String(candidate).trim();
+  if (!s) return fallback;
+  try {
+    const u = new URL(s);
+    const loopback = u.hostname === 'localhost' || u.hostname === '127.0.0.1';
+    if (loopback && !isLocal) return fallback;
+    return s;
+  } catch {
+    if (!isLocal && /localhost|127\.0\.0\.1/.test(s)) return fallback;
+    return s;
+  }
+}
+
 const DIGITALOCEAN_FUNCTIONS = {
-  speechProxy: import.meta.env.VITE_SPEECH_PROXY_URL || `${DO_BASE}${DO_SPEECH_PATH}`,
+  speechProxy: sanitizeSpeechProxyUrlForOrigin(
+    import.meta.env.VITE_SPEECH_PROXY_URL || DO_SPEECH_PROXY_FALLBACK,
+    DO_SPEECH_PROXY_FALLBACK,
+  ),
   chatgptProxy: import.meta.env.VITE_CHATGPT_PROXY_URL || `${DO_BASE}/chatgptProxy`,
   authProxy: import.meta.env.VITE_AUTH_PROXY_URL || `${DO_BASE}/authProxy`,
   pdfProxy: import.meta.env.VITE_PDF_PROXY_URL || `${DO_BASE}/pdfProxy`,
@@ -47,15 +71,17 @@ const API_PROVIDER = (import.meta.env.VITE_API_PROVIDER || 'digitalocean') as 'd
 
 // Get the appropriate URL based on provider and environment
 function getApiUrl(functionName: keyof typeof DIGITALOCEAN_FUNCTIONS): string {
-  if (isLocal && API_PROVIDER === 'local') {
+  // Only hit localhost proxies when we are actually on dev/localhost. A production build
+  // must never call localhost even if VITE_API_PROVIDER=local was mistakenly set at build time.
+  if (API_PROVIDER === 'local' && isLocal) {
     return LOCAL_PROXIES[functionName];
   }
-  
+
   switch (API_PROVIDER) {
     case 'digitalocean':
       return DIGITALOCEAN_FUNCTIONS[functionName];
     case 'local':
-      return LOCAL_PROXIES[functionName];
+      return DIGITALOCEAN_FUNCTIONS[functionName];
     case 'netlify':
       return NETLIFY_FUNCTIONS[functionName];
     default:

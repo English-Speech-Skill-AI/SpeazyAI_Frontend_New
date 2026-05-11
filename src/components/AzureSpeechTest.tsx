@@ -13,6 +13,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react"
 import * as sdk from "microsoft-cognitiveservices-speech-sdk"
+import { applyAzureSpeechAssessmentRecognitionPreferences } from "@/utils/azureSpeechRecognitionConfig"
 import { PageHeader } from "./PageHeader"
 import { Button } from "./ui/button"
 import { Mic, Square, Upload, Loader2 } from "lucide-react"
@@ -117,6 +118,7 @@ export function AzureSpeechTest() {
   function buildRecognizer(audioConfig: sdk.AudioConfig): sdk.SpeechRecognizer {
     const speechConfig = sdk.SpeechConfig.fromSubscription(KEY!, REGION!)
     speechConfig.speechRecognitionLanguage = LANG
+    applyAzureSpeechAssessmentRecognitionPreferences(speechConfig)
 
     const paConfig = new sdk.PronunciationAssessmentConfig(
       referenceText,

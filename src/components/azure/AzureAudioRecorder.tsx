@@ -23,6 +23,7 @@ import { Mic, Square, Play, Pause, RotateCcw } from "lucide-react"
 import { Button } from "../ui/button"
 import { RecordingWaveform } from "../recordingWaveform"
 import { LoadingAssessment } from "../loadingAssessment"
+import { applyAzureSpeechAssessmentRecognitionPreferences } from "@/utils/azureSpeechRecognitionConfig"
 
 type AzureWord = {
   Word: string
@@ -60,6 +61,62 @@ const RECOGNITION_CONFIG = {
   enableMiscue: true,
   enableProsody: true,
   language: (import.meta.env.VITE_AZURE_SPEECH_LANGUAGE as string | undefined) || "en-US",
+}
+
+/** Strip decorative quotes so scripted alignment matches the spoken passage (FamousSpeeches wraps kid-friendly text in quotes). */
+function normalizeReferenceForPa(text: string): string {
+  if (!text) return ""
+  return text
+    .replace(/[\u201C\u201D\u2018\u2019\u201A\u201B\u00AB\u00BB`"'«»]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
+/** Prefer lexical transcript over Display — Display omits many fillers/disfluencies. */
+function phraseTranscriptFromNBest(nb: any): string {
+  if (!nb) return ""
+  const lexical = String(nb.Lexical ?? "").trim()
+  const masked = String(nb.MaskedITN ?? "").trim()
+  const wordsArr = nb.Words
+  if (Array.isArray(wordsArr) && wordsArr.length > 0) {
+    return wordsArr.map((w: any) => (w.Word ?? "").trim()).filter(Boolean).join(" ")
+  }
+  if (lexical) return lexical
+  if (masked) return masked
+  return String(nb.Display ?? "").trim()
+}
+
+function countEnglishFillers(text: string): number {
+  const m = text.match(/\b(um|uh|uhm|umm|erm|er|ah|hmm|hm|like|you know)\b/gi)
+  return m ? m.length : 0
+}
+
+function tokenizeForOverlap(text: string): string[] {
+  return normalizeReferenceForPa(text)
+    .toLowerCase()
+    .replace(/[^a-z0-9\s']/g, " ")
+    .split(/\s+/)
+    .filter(Boolean)
+}
+
+/** Fraction of reference words matched in order (LCS length / len(reference)). Ignores filler insertions in prediction. */
+function referenceRecall(reference: string, predicted: string): number {
+  const ref = tokenizeForOverlap(reference)
+  const pred = tokenizeForOverlap(predicted)
+  if (ref.length === 0) return pred.length > 0 ? 1 : 0
+  if (pred.length === 0) return 0
+  const m = ref.length
+  const n = pred.length
+  const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0))
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] =
+        ref[i - 1] === pred[j - 1]
+          ? dp[i - 1][j - 1] + 1
+          : Math.max(dp[i - 1][j], dp[i][j - 1])
+    }
+  }
+  return dp[m][n] / m
 }
 
 // ---------- helpers -------------------------------------------------------
@@ -109,6 +166,7 @@ function mapToLcShape(input: {
   durationMs: number
 }) {
   const { recognitions, expectedText } = input
+  const refNormalized = normalizeReferenceForPa(expectedText)
 
   const words: ReturnType<typeof mapWord>[] = []
   const accuracyScores: number[] = []
@@ -116,12 +174,13 @@ function mapToLcShape(input: {
   const completenessScores: number[] = []
   const prosodyScores: number[] = []
   const phraseDurations: number[] = []
-  const displayParts: string[] = []
+  const transcriptParts: string[] = []
 
   for (const json of recognitions) {
     const nb = json?.NBest?.[0]
     if (!nb) continue
-    if (nb.Display) displayParts.push(nb.Display)
+    const phraseTx = phraseTranscriptFromNBest(nb)
+    if (phraseTx) transcriptParts.push(phraseTx)
     const pa = nb.PronunciationAssessment || {}
     if (pa.AccuracyScore != null) accuracyScores.push(pa.AccuracyScore)
     if (pa.FluencyScore != null) fluencyScores.push(pa.FluencyScore)
@@ -140,60 +199,91 @@ function mapToLcShape(input: {
   const valuesForPron = [accuracy ?? 0, fluency ?? 0, completeness ?? 0]
   if (prosody != null) valuesForPron.push(prosody)
   const sorted = [...valuesForPron].sort((a, b) => a - b)
-  const pronunciationScore =
+  const rawCompositeScore =
     sorted.length === 4
       ? Math.round(sorted[0] * 0.4 + sorted[1] * 0.2 + sorted[2] * 0.2 + sorted[3] * 0.2)
       : sorted.length === 3
       ? Math.round(sorted[0] * 0.4 + sorted[1] * 0.3 + sorted[2] * 0.3)
       : avg(sorted) ?? 0
 
-  const predictedText = displayParts.join(" ").trim()
-  const isScripted = !!expectedText
+  // Word-level list from PA preserves insertions / omissions when miscue is enabled — prefer it over
+  // phrase transcripts so fillers / mistakes stay visible in the UI.
+  const predictedFromWords = words.map((w) => w.word_text).filter(Boolean).join(" ").trim()
+  const predictedFromPhrases = transcriptParts.join(" ").trim()
+  const predictedText = predictedFromWords || predictedFromPhrases
+
+  const isScripted = !!expectedText?.trim()
+
+  // Azure phrase scores can still look “okay” on nonsense fragments; gate headline scores by how much
+  // of the reference passage actually appears in the recognized transcript (order-aware LCS recall).
+  const refTokCount = tokenizeForOverlap(refNormalized).length
+  const recall =
+    isScripted && refNormalized && predictedText.trim()
+      ? referenceRecall(refNormalized, predictedText)
+      : 1
+  const MIN_REF_WORDS_FOR_GATE = 10
+  let honestyFactor = 1
+  if (isScripted && refTokCount >= MIN_REF_WORDS_FOR_GATE && predictedText.trim()) {
+    if (recall < 0.42) {
+      honestyFactor = Math.min(1, Math.max(recall * 2.35 + 0.07, 0.12))
+    }
+  }
+  const scaledPronunciationScore = Math.round(rawCompositeScore * honestyFactor)
+  const scaledFluency = fluency != null ? Math.round(fluency * honestyFactor) : fluency
+
+  const warningsObj: Record<string, string> = {}
+  if (isScripted && refTokCount >= MIN_REF_WORDS_FOR_GATE && recall < 0.35 && predictedText.trim()) {
+    warningsObj.transcript_alignment =
+      "Very little of your transcript follows this passage in order, so headline scores are scaled down. Let assessment finish after you stop (do not close the tab immediately), speak clearly toward the mic, and read more of the script."
+  }
 
   // Reading metrics for the scripted (passage reading) flow
   const totalWordsRead = words.length
   const speedWpm =
     input.durationMs > 0 ? +((totalWordsRead / (input.durationMs / 60000)) || 0).toFixed(1) : null
 
+  const fillerWords = countEnglishFillers(predictedText)
+
   const out: any = {
     pronunciation: {
-      overall_score: pronunciationScore,
+      overall_score: scaledPronunciationScore,
       prosody_score: prosody,
       accuracy_score: accuracy,
       completeness_score: completeness,
-      ...(isScripted && expectedText ? { expected_text: expectedText } : {}),
+      ...(isScripted && refNormalized ? { expected_text: refNormalized } : {}),
       words,
     },
     fluency: {
-      overall_score: fluency,
+      overall_score: scaledFluency,
       metrics: {
         speech_rate: speedWpm,
         pauses: null,
-        filler_words: null,
+        filler_words: fillerWords,
       },
       feedback: {},
     },
     // IELTS / CEFR predictions are populated asynchronously by the result page via ChatGPT,
     // since Azure does not return them.
     overall: {
-      overall_score: pronunciationScore,
+      overall_score: scaledPronunciationScore,
       english_proficiency_scores: {
         mock_ielts: { prediction: null },
         mock_cefr: { prediction: null },
         mock_pte: { prediction: null },
       },
     },
-    warnings: [],
+    warnings: warningsObj,
     metadata: {
       provider: "azure",
       recognition_status: recognitions.length ? "Success" : "NoMatch",
       predicted_text: predictedText,
-      content_relevance: 0,
-      ...(isScripted && expectedText ? { reference_text: expectedText } : {}),
+      content_relevance: Math.round(recall * 100),
+      ...(isScripted && refNormalized ? { reference_text: refNormalized } : {}),
+      ...(honestyFactor < 1 ? { transcript_recall: recall, headline_scale: honestyFactor } : {}),
     },
-    pronunciation_score: pronunciationScore,
-    fluency_score: fluency,
-    overall_score: pronunciationScore,
+    pronunciation_score: scaledPronunciationScore,
+    fluency_score: scaledFluency,
+    overall_score: scaledPronunciationScore,
   }
 
   if (isScripted) {
@@ -263,6 +353,10 @@ export function AzureAudioRecorder({
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const recordedDataUrlRef = useRef<string | null>(null)
   const recordingStartRef = useRef<number>(0)
+  /** Mic may only be stopped after Azure finishes reading PCM — see shutdownCaptureAfterSdk. */
+  const pipelineProcessorCloseRef = useRef<(() => void) | null>(null)
+  const captureShutdownDoneRef = useRef(false)
+  const sdkHangSafetyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // The MediaRecorder stop and the SDK sessionStopped are independent; we wait for both
   // and then emit a single onApiResponse so the consumer can navigate immediately.
@@ -309,7 +403,8 @@ export function AzureAudioRecorder({
 
   function maybeEmit() {
     const r = recordingFinishedRef.current
-    if (!r.audio || !r.sessionEnded) return
+    // Wait for both Azure session end and MediaRecorder blob — order varies by browser.
+    if (!r.sessionEnded || !r.audio) return
     const lcShaped = mapToLcShape({
       recognitions: recognitionsRef.current,
       expectedText,
@@ -323,11 +418,35 @@ export function AzureAudioRecorder({
     }
   }
 
+  function shutdownCaptureAfterSdk() {
+    if (captureShutdownDoneRef.current) return
+    captureShutdownDoneRef.current = true
+    try {
+      pipelineProcessorCloseRef.current?.()
+    } catch {
+      /* noop */
+    }
+    pipelineProcessorCloseRef.current = null
+    try {
+      streamRef.current?.getTracks().forEach((t) => t.stop())
+    } catch {
+      /* noop */
+    }
+    streamRef.current = null
+    try {
+      audioContextRef.current?.close().catch(() => {})
+    } catch {
+      /* noop */
+    }
+    audioContextRef.current = null
+  }
+
   function buildSdkPipeline(stream: MediaStream): sdk.SpeechRecognizer {
     if (!KEY || !REGION) throw new Error("Azure credentials not configured (VITE_AZURE_SPEECH_KEY / VITE_AZURE_SPEECH_REGION).")
 
     const speechConfig = sdk.SpeechConfig.fromSubscription(KEY, REGION)
     speechConfig.speechRecognitionLanguage = RECOGNITION_CONFIG.language
+    applyAzureSpeechAssessmentRecognitionPreferences(speechConfig)
 
     // Push raw 16-bit PCM 16 kHz into the SDK; we resample from the user's mic ourselves.
     const pushStream = sdk.AudioInputStream.createPushStream(
@@ -374,12 +493,20 @@ export function AzureAudioRecorder({
       try { muted.disconnect() } catch { /* noop */ }
       try { source.disconnect() } catch { /* noop */ }
     }
+    pipelineProcessorCloseRef.current = () => {
+      try {
+        ;(processor as any).__close?.()
+      } catch {
+        /* noop */
+      }
+    }
 
+    const referenceNorm = normalizeReferenceForPa(expectedText)
     const paConfig = new sdk.PronunciationAssessmentConfig(
-      expectedText,
+      referenceNorm,
       sdk.PronunciationAssessmentGradingSystem.HundredMark,
       sdk.PronunciationAssessmentGranularity.Phoneme,
-      RECOGNITION_CONFIG.enableMiscue && !!expectedText,
+      RECOGNITION_CONFIG.enableMiscue && referenceNorm.length > 0,
     )
     paConfig.enableProsodyAssessment = RECOGNITION_CONFIG.enableProsody
 
@@ -405,13 +532,25 @@ export function AzureAudioRecorder({
       } catch {
         /* noop */
       }
+      // Normal shutdown still triggers sessionStopped → shutdownCaptureAfterSdk.
+      // If the service errors hard and sessionStopped never fires, avoid leaking the mic forever:
+      if (sdkHangSafetyTimerRef.current) clearTimeout(sdkHangSafetyTimerRef.current)
+      sdkHangSafetyTimerRef.current = window.setTimeout(() => {
+        sdkHangSafetyTimerRef.current = null
+        if (!captureShutdownDoneRef.current) {
+          shutdownCaptureAfterSdk()
+          recordingFinishedRef.current.sessionEnded = true
+          maybeEmit()
+          setIsLoading(false)
+        }
+      }, 2500)
     }
     recognizer.sessionStopped = () => {
-      try {
-        ;(processor as any).__close?.()
-      } catch {
-        /* noop */
+      if (sdkHangSafetyTimerRef.current) {
+        clearTimeout(sdkHangSafetyTimerRef.current)
+        sdkHangSafetyTimerRef.current = null
       }
+      shutdownCaptureAfterSdk()
       recordingFinishedRef.current.sessionEnded = true
       maybeEmit()
     }
@@ -427,6 +566,12 @@ export function AzureAudioRecorder({
     setError(null)
     recognitionsRef.current = []
     recordingFinishedRef.current = {}
+    captureShutdownDoneRef.current = false
+    pipelineProcessorCloseRef.current = null
+    if (sdkHangSafetyTimerRef.current) {
+      clearTimeout(sdkHangSafetyTimerRef.current)
+      sdkHangSafetyTimerRef.current = null
+    }
     setAudioUrl(null)
 
     try {
@@ -499,7 +644,9 @@ export function AzureAudioRecorder({
     } catch {
       /* noop */
     }
-    streamRef.current?.getTracks().forEach((t) => t.stop())
+    // Do NOT stop the microphone here — Azure is still consuming audio until sessionStopped/canceled.
+    // Stopping tracks immediately was truncating recognition (junk transcripts like "a i a") while
+    // phrase-level scores could still look plausible.
   }
 
   // ---------- audio element wiring (playback) ----------------------------
