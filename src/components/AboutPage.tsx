@@ -97,7 +97,7 @@ export function AboutPage() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative z-10">
         {/* Hero Section */}
         <div className="text-center mb-16 radial-gradient-hero py-12">
-          <h2 className="text-5xl md:text-6xl text-[#1E3A8A] mb-6">English Skill AI</h2>
+          <h2 className="text-5xl md:text-6xl text-[#1E3A8A] mb-6">English Pro AI</h2>
           <div className="w-32 h-1 bg-gradient-to-r from-[#3B82F6] to-[#00B9FC] mx-auto mb-8 rounded-full" />
           <p className="text-xl text-[#1E3A8A]/70 max-w-3xl mx-auto leading-relaxed">
             Building confident communicators through innovative AI technology and expert-designed learning experiences
@@ -135,7 +135,7 @@ export function AboutPage() {
               <h3 className="text-3xl text-white mb-6 text-center">Our Story</h3>
               <div className="space-y-4 text-white/90 text-lg leading-relaxed max-w-4xl mx-auto">
                 <p>
-                  English Skill AI was born from a simple observation: many children struggle with public speaking and
+                  English Pro AI was born from a simple observation: many children struggle with public speaking and
                   verbal communication, but traditional methods don't always engage them effectively.
                 </p>
                 <p>
@@ -144,7 +144,7 @@ export function AboutPage() {
                   confidence while developing essential communication skills.
                 </p>
                 <p>
-                  Today, thousands of children around the world use English Skill AI to improve their speaking
+                  Today, thousands of children around the world use English Pro AI to improve their speaking
                   abilities, overcome stage fright, and express themselves with confidence.
                 </p>
               </div>

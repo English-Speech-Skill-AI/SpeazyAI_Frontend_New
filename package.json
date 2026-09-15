@@ -1,5 +1,5 @@
 {
-  "name": "EnglishSkillAI",
+  "name": "EnglishProAI",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
@@ -72,7 +72,8 @@
     "vite": "6.3.5"
   },
   "scripts": {
-    "deploy": "bash deploy.sh",
+    "deploy": "node deploy.mjs",
+    "deploy:bash": "bash deploy.sh",
     "dev": "vite",
     "build": "vite build",
     "proxy:speech": "node speechProxyServer.js",

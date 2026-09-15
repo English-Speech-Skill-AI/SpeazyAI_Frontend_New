@@ -151,7 +151,7 @@ export function ClassManagement() {
   const [users, setUsers] = useState<User[]>([])
 
   const menuItems = [
-    { id: "english-skill-ai", label: "English Skill AI", icon: Mic2, route: "/skills-home" },
+    { id: "english-pro-ai", label: "English Pro AI", icon: Mic2, route: "/skills-home" },
     { id: "dashboard", label: "Dashboard", icon: Briefcase, route: "/progress-dashboard" },
     { id: "class-management", label: "Class Management", icon: Users, route: "/progress-dashboard/classes", active: true },
     { id: "license-management", label: "License Management", icon: Shield, route: "/progress-dashboard/license" },
@@ -1548,7 +1548,7 @@ export function ClassManagement() {
               }}
               onClick={() => navigate("/skills-home")}
             >
-              ENGLISH SKILL AI
+              English Pro AI
             </h2>
           )}
           <button

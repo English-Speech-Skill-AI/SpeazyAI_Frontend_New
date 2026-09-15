@@ -78,7 +78,7 @@ export function LicenseManagement() {
   const [registerFormData, setRegisterFormData] = useState({
     organizationName: "",
     address: "",
-    licenseType: "EnglishSkill AI",
+    licenseType: "English Pro AI",
     assignedLicenses: "",
     startDate: "",
     expiryDate: "",
@@ -102,7 +102,7 @@ export function LicenseManagement() {
       organization: "Kerala Public School",
       licenseId: "1062",
       type: "Education",
-      license: "EnglishSkill AI",
+      license: "English Pro AI",
       assigned: 500,
       available: 500,
       expiry: "2025-12-31",
@@ -114,7 +114,7 @@ export function LicenseManagement() {
       organization: "Lorene levavasseur",
       licenseId: "1074",
       type: "Education",
-      license: "EnglishSkill AI",
+      license: "English Pro AI",
       assigned: 10,
       available: 9,
       expiry: "2026-03-31",
@@ -126,7 +126,7 @@ export function LicenseManagement() {
       organization: "Loyola School",
       licenseId: "1042",
       type: "N/A",
-      license: "EnglishSkill AI",
+      license: "English Pro AI",
       assigned: 10,
       available: 9,
       expiry: "2025-08-18",
@@ -138,7 +138,7 @@ export function LicenseManagement() {
       organization: "Xelerate Learning",
       licenseId: "1009",
       type: "Corporate",
-      license: "EnglishSkill AI",
+      license: "English Pro AI",
       assigned: 100,
       available: 89,
       expiry: "2030-12-31",
@@ -150,7 +150,7 @@ export function LicenseManagement() {
       organization: "Mother India School",
       licenseId: "1076",
       type: "Education",
-      license: "EnglishSkill AI",
+      license: "English Pro AI",
       assigned: 8,
       available: 0,
       expiry: "2026-06-30",
@@ -162,7 +162,7 @@ export function LicenseManagement() {
       organization: "AVK Public School",
       licenseId: "1012",
       type: "Education",
-      license: "EnglishSkill AI",
+      license: "English Pro AI",
       assigned: 500,
       available: 492,
       expiry: "2026-12-31",
@@ -174,7 +174,7 @@ export function LicenseManagement() {
       organization: "Shalini Bhavan English Medium School",
       licenseId: "1063",
       type: "Education",
-      license: "EnglishSkill AI",
+      license: "English Pro AI",
       assigned: 10,
       available: 0,
       expiry: "2026-05-15",
@@ -186,7 +186,7 @@ export function LicenseManagement() {
       organization: "XelerateCorporateTest",
       licenseId: "1064",
       type: "Corporate",
-      license: "EnglishSkill AI",
+      license: "English Pro AI",
       assigned: 10,
       available: 7,
       expiry: "2027-01-31",
@@ -198,7 +198,7 @@ export function LicenseManagement() {
       organization: "Red Chip Solutions",
       licenseId: "1047",
       type: "Corporate",
-      license: "EnglishSkill AI",
+      license: "English Pro AI",
       assigned: 100,
       available: 94,
       expiry: "2028-12-31",
@@ -210,7 +210,7 @@ export function LicenseManagement() {
       organization: "New Meaning Foundation",
       licenseId: "1065",
       type: "Corporate",
-      license: "EnglishSkill AI",
+      license: "English Pro AI",
       assigned: 30,
       available: 29,
       expiry: "2027-06-30",
@@ -222,7 +222,7 @@ export function LicenseManagement() {
       organization: "Nicole Perry Ellis Coaching Consulting",
       licenseId: "1066",
       type: "Corporate",
-      license: "EnglishSkill AI",
+      license: "English Pro AI",
       assigned: 30,
       available: 29,
       expiry: "2027-08-15",
@@ -234,7 +234,7 @@ export function LicenseManagement() {
   const [licenses, setLicenses] = useState<License[]>([])
 
   const menuItems = [
-    { id: "english-skill-ai", label: "English Skill AI", icon: Mic2, route: "/skills-home" },
+    { id: "english-pro-ai", label: "English Pro AI", icon: Mic2, route: "/skills-home" },
     { id: "dashboard", label: "Dashboard", icon: Briefcase, route: "/progress-dashboard" },
     { id: "class-management", label: "Class Management", icon: Users, route: "/progress-dashboard/classes" },
     { id: "license-management", label: "License Management", icon: Shield, route: "/progress-dashboard/license", active: true },
@@ -351,7 +351,9 @@ export function LicenseManagement() {
               organization: org.organisation || "Unknown",
               licenseId: org.id?.toString() || Date.now().toString(),
               type: "Education", // Always Education
-              license: org.license === "englishskillsai" ? "EnglishSkill AI" : (org.license || "EnglishSkill AI"),
+              license: ["englishproai", "englishpro", "englishskillsai", "englishskill"].includes(org.license)
+                ? "English Pro AI"
+                : (org.license || "English Pro AI"),
               assigned: org.assigned_licenses || 0,
               available:
                 org.available_licenses !== undefined && org.available_licenses !== null
@@ -648,7 +650,7 @@ export function LicenseManagement() {
         organisation: registerFormData.organizationName,
         organisation_type: "school",
         address: registerFormData.address,
-        license: registerFormData.licenseType.toLowerCase().replace(/\s+/g, "").replace(/ai$/i, ""), // Convert "EnglishSkill AI" to "englishskills"
+        license: registerFormData.licenseType.toLowerCase().replace(/\s+/g, "").replace(/ai$/i, ""), // Convert "English Pro AI" to "englishpro"
         start_date: registerFormData.startDate,
         expiry: registerFormData.expiryDate,
         assigned_licenses: parseInt(registerFormData.assignedLicenses),
@@ -687,7 +689,7 @@ export function LicenseManagement() {
         setRegisterFormData({
           organizationName: "",
           address: "",
-          licenseType: "EnglishSkill AI",
+          licenseType: "English Pro AI",
           assignedLicenses: "",
           startDate: "",
           expiryDate: "",
@@ -1039,7 +1041,7 @@ export function LicenseManagement() {
               }}
               onClick={() => navigate("/skills-home")}
             >
-              ENGLISH SKILL AI
+              English Pro AI
             </h2>
           )}
           <button
@@ -1594,7 +1596,7 @@ export function LicenseManagement() {
             setRegisterFormData({
               organizationName: "",
               address: "",
-              licenseType: "EnglishSkill AI",
+              licenseType: "English Pro AI",
               assignedLicenses: "",
               startDate: "",
               expiryDate: "",
@@ -1796,7 +1798,7 @@ export function LicenseManagement() {
                 setRegisterFormData({
                   organizationName: "",
                   address: "",
-                  licenseType: "EnglishSkill AI",
+                  licenseType: "English Pro AI",
                   assignedLicenses: "",
                   startDate: "",
                   expiryDate: "",

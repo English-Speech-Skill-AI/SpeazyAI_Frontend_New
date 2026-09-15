@@ -1,8 +1,8 @@
 exports.handler = async (event) => {
   const origin = event.headers?.origin || event.headers?.Origin || '';
-  const allowedOrigins = ['https://speazyai.netlify.app', 'https://englishskill.intelliviq.com', 'http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:3000', 'http://127.0.0.1:5173'];
+  const allowedOrigins = ['https://speazyai.netlify.app', 'https://englishproai.intelliviq.com', 'http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:3000', 'http://127.0.0.1:5173'];
   const isNetlifyPreview = origin.includes('.netlify.app') || origin.includes('intelliviq.com');
-  const allowedOrigin = allowedOrigins.includes(origin) || isNetlifyPreview ? origin : 'https://englishskill.intelliviq.com';
+  const allowedOrigin = allowedOrigins.includes(origin) || isNetlifyPreview ? origin : 'https://englishproai.intelliviq.com';
 
   // Handle CORS preflight
   if (event.httpMethod === "OPTIONS") {

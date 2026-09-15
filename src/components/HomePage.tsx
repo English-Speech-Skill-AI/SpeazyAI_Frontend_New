@@ -238,7 +238,7 @@ export function HomePage() {
         <div data-mello-scroll style={{ maxWidth: 1280, margin: "0 auto", padding: isMobile ? "16px 16px 32px" : "32px 24px 32px", paddingTop: isMobile ? 120 : 160, width: "100%" }}>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 32, alignItems: "center", width: "100%" }}>
             <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 16 }}>
-              {/* Mello Logo and English Skill AI */}
+              {/* Mello Logo and English Pro AI */}
               <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16 }}>
                 <motion.div
                   animate={{ y: [0, -12, 0] }}

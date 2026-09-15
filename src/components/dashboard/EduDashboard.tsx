@@ -1623,7 +1623,7 @@ export function EduDashboard() {
   }
 
   const menuItems = [
-    { id: "english-skill-ai", label: "English Skill AI", icon: Mic2, route: "/skills-home" },
+    { id: "english-pro-ai", label: "English Pro AI", icon: Mic2, route: "/skills-home" },
     { id: "dashboard", label: "Dashboard", icon: Briefcase, route: "/progress-dashboard", active: true },
     { id: "class-management", label: "Class Management", icon: Users, route: "/progress-dashboard/classes" },
     { id: "license-management", label: "License Management", icon: Shield, route: "/progress-dashboard/license" },
@@ -3175,7 +3175,7 @@ export function EduDashboard() {
               }}
               onClick={() => navigate("/skills-home")}
             >
-              ENGLISH SKILL AI
+              English Pro AI
             </h2>
           )}
           <button
@@ -3479,7 +3479,7 @@ export function EduDashboard() {
                 }}
               >
                 <Mic2 style={{ width: "16px", height: "16px", marginRight: "8px" }} />
-                English Skill AI
+                English Pro AI
               </Button>
             </div>
           </div>

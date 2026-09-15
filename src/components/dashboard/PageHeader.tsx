@@ -77,7 +77,7 @@ export function PageHeader() {
                 color: "#FFFFFF",
               }}
             >
-              English Skill AI
+              English Pro AI
             </h1>
           </div>
 

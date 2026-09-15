@@ -47,10 +47,10 @@ To support Arabic translation, you will need to:
 
 | File | Static Text / Labels |
 |------|----------------------|
-| **HomePage.tsx** | NAV_ITEMS: "Home", "About", "Courses", "Features", "Contact", "Contact Us", "Sign In", "English Skill AI", "Open menu", hero text, feature descriptions, CTA buttons |
-| **AboutPage.tsx** | "About Us", "Back", "English Skill AI", "Building confident communicators...", "Our Mission", "Kid-Friendly", "Expert-Crafted", "Our Story", "Active Students", "Lessons Completed", "Satisfaction Rate", feature titles/descriptions |
+| **HomePage.tsx** | NAV_ITEMS: "Home", "About", "Courses", "Features", "Contact", "Contact Us", "Sign In", "English Pro AI", "Open menu", hero text, feature descriptions, CTA buttons |
+| **AboutPage.tsx** | "About Us", "Back", "English Pro AI", "Building confident communicators...", "Our Mission", "Kid-Friendly", "Expert-Crafted", "Our Story", "Active Students", "Lessons Completed", "Satisfaction Rate", feature titles/descriptions |
 | **ContactPage.tsx** | "Back to Home", "Contact Us", "Get In Touch", "Have questions? We'd love to hear from you...", "Email Us", "Call Us", "Visit Us", form labels, placeholders, "Send Message", "Message sent successfully!" |
-| **PageHeader.tsx** | "English Skill AI", streak text (e.g. "X day(s) streak"), "Progress Dashboard" |
+| **PageHeader.tsx** | "English Pro AI", streak text (e.g. "X day(s) streak"), "Progress Dashboard" |
 | **ApplicationLanding.tsx** | "AI Chat Coach", "Academic Content", "IELTS Preparation", module descriptions |
 
 ---
