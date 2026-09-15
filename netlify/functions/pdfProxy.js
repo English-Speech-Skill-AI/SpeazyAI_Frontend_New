@@ -1,5 +1,8 @@
 exports.handler = async (event) => {
-  const allowedOrigin = "https://speazyai.netlify.app";
+  const origin = event.headers?.origin || event.headers?.Origin || '';
+  const allowedOrigins = ['https://speazyai.netlify.app', 'http://localhost:3000', 'http://127.0.0.1:3000'];
+  const isNetlifyPreview = origin.includes('.netlify.app');
+  const allowedOrigin = allowedOrigins.includes(origin) || isNetlifyPreview ? origin : 'https://speazyai.netlify.app';
 
   // Handle CORS preflight
   if (event.httpMethod === "OPTIONS") {

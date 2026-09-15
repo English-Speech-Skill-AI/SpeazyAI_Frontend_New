@@ -1,5 +1,6 @@
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, XCircle, TrendingUp } from 'lucide-react';
+import { useConfetti } from '../../hooks/useConfetti';
 
 interface EvaluationData {
   ieltsScore: number;
@@ -39,6 +40,12 @@ export function IELTSWritingResults() {
     timeSpent: number;
     totalTimeSeconds?: number;
   };
+
+  // Celebration confetti when results are shown (only when score > 50%)
+  const confettiScore = state?.overallScore ?? 0
+  const scorePercent = confettiScore <= 9 ? (confettiScore / 9) * 100 : confettiScore
+  const showConfetti = !!(state && scorePercent > 50)
+  useConfetti(showConfetti)
 
   if (!state) {
     return (

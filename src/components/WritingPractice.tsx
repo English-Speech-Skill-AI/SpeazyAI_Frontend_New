@@ -6,35 +6,37 @@ import { WritingBeginner } from "./writing-practice/WritingBeginner";
 import { WritingIntermediate } from "./writing-practice/WritingIntermediate";
 import { WritingAdvanced } from "./writing-practice/WritingAdvanced";
 import { beginnerPractices, intermediatePractices, advancedPractices } from "./writing-practice/practiceData";
-import { useNavigate } from "react-router-dom";
+import { useLocalizedNavigate } from "./LocaleLayout";
+import { useTranslation } from "react-i18next";
 
 interface WritingPracticeProps {
-  onBack: () => void;
+  onBack?: () => void;
 }
 
 type WritingView = "levels" | "beginner" | "intermediate" | "advanced";
 
 export function WritingPractice({ onBack }: WritingPracticeProps) {
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
+  const { t } = useTranslation();
   const [currentView, setCurrentView] = useState<WritingView>("levels");
 
   const levels = [
     {
       id: "beginner",
-      title: "Beginner",
-      description: "Start your writing journey",
+      titleKey: "writingPractice.beginner",
+      descriptionKey: "writingPractice.beginnerDesc",
       color: "from-[#3B82F6] to-[#00B9FC]",
     },
     {
       id: "intermediate",
-      title: "Intermediate",
-      description: "Build your writing skills",
+      titleKey: "writingPractice.intermediate",
+      descriptionKey: "writingPractice.intermediateDesc",
       color: "from-[#00B9FC] to-[#246BCF]",
     },
     {
       id: "advanced",
-      title: "Advanced",
-      description: "Master creative writing",
+      titleKey: "writingPractice.advanced",
+      descriptionKey: "writingPractice.advancedDesc",
       color: "from-[#246BCF] to-[#1E3A8A]",
     },
   ];
@@ -78,9 +80,9 @@ export function WritingPractice({ onBack }: WritingPracticeProps) {
               className="text-white hover:text-[#CFE2FF] hover:bg-white/10"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Skills Home
+              {t("writingPractice.backToSkillsHome")}
             </Button>
-            <h1 className="text-xl text-white">Writing Practice</h1>
+            <h1 className="text-xl text-white">{t("writingPractice.title")}</h1>
             <div className="w-32" />
           </div>
         </div>
@@ -91,9 +93,9 @@ export function WritingPractice({ onBack }: WritingPracticeProps) {
           <div className="inline-block p-4 bg-white/20 rounded-full mb-4 backdrop-blur-sm">
             <PenTool className="w-12 h-12 text-white" />
           </div>
-          <h2 className="text-4xl text-white mb-3">Choose Your Level</h2>
+          <h2 className="text-4xl text-white mb-3">{t("writingPractice.chooseYourLevel")}</h2>
           <p className="text-lg text-white/80 max-w-2xl mx-auto">
-            Start your writing adventure! Pick a level that's just right for you.
+            {t("writingPractice.startAdventure")}
           </p>
         </div>
 
@@ -120,10 +122,10 @@ export function WritingPractice({ onBack }: WritingPracticeProps) {
                 </div>
 
                 <h3 className="text-2xl text-[#1E3A8A] text-center mb-2">
-                  {level.title}
+                  {t(level.titleKey)}
                 </h3>
                 <p className="text-[#1E3A8A]/70 text-center text-sm">
-                  {level.description}
+                  {t(level.descriptionKey)}
                 </p>
 
                 {/* Bottom decoration */}
@@ -141,7 +143,7 @@ export function WritingPractice({ onBack }: WritingPracticeProps) {
         <div className="mt-16 text-center">
           <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm px-6 py-3 rounded-full">
             <BookOpen className="w-5 h-5 text-white" />
-            <span className="text-white">Let's make writing fun together!</span>
+            <span className="text-white">{t("writingPractice.letsMakeWritingFun")}</span>
             <Star className="w-5 h-5 text-[#FFD600]" />
           </div>
         </div>

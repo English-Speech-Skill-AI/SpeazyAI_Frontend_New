@@ -120,6 +120,7 @@ export async function main(event) {
   const question = body.question != null ? String(body.question).trim() : "";
   const answer = body.answer != null ? String(body.answer).trim() : "";
   const level = body.level ?? "intermediate";
+  const locale = (body.locale ?? "en").toString().toLowerCase();
 
   const openaiApiKey = process.env.OPENAI_API_KEY;
   if (!openaiApiKey) {
@@ -282,6 +283,10 @@ ${expected_text.slice(0, 8000)}`;
     };
   }
 
+  const langInstruction = locale === "ar"
+    ? "\n\nCRITICAL: All text in your JSON response must be in Arabic (العربية). The feedback, corrections (original and corrected stay as-is from the student's text; explanation must be in Arabic), breakdown values, suggestions, and strengths must all be written in Arabic."
+    : "";
+
   const prompt = `You are an IELTS writing examiner.
 
 Question:
@@ -308,6 +313,7 @@ Return ONLY valid JSON in this format:
   "suggestions": string[],
   "strengths": string[]
 }
+${langInstruction}
 `;
 
   const model = process.env.OPENAI_IELTS_MODEL || "gpt-4o-mini";

@@ -167,7 +167,7 @@ export function MelloAssistant({
                         if (onSupportClick) {
                           onSupportClick();
                         } else if (supportEmail) {
-                          const subject = encodeURIComponent("Support Request - English Skill AI");
+                          const subject = encodeURIComponent("Support Request - English Pro AI");
                           const body = encodeURIComponent(
                             "Please describe your issue below:\n\n\n(You can attach a screenshot to this email to help us understand the problem.)"
                           );

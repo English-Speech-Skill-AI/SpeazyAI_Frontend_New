@@ -1,14 +1,16 @@
 "use client"
 
 import React, { useState } from "react"
-import { useNavigate, useLocation } from "react-router-dom"
+import { useLocation } from "react-router-dom"
+import { useLocalizedNavigate } from "./LocaleLayout"
+import { useTranslation } from "react-i18next"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { ArrowLeft, Play } from "lucide-react"
 
 interface VideoCategory {
   id: string
-  title: string
+  titleKey: string
   videos: VideoItem[]
 }
 
@@ -51,7 +53,7 @@ function removeDuplicates(videos: VideoItem[]): VideoItem[] {
 const videoCategories: VideoCategory[] = [
   {
     id: "all-phonemes",
-    title: "Complete Phoneme Guide",
+    titleKey: "sampleVideos.completePhonemeGuide",
     videos: removeDuplicates([
       { id: "wBuA589kfMg", url: "https://www.youtube.com/watch?v=wBuA589kfMg" },
       { id: "43v0iSq-0T0", url: "https://www.youtube.com/watch?v=43v0iSq-0T0" },
@@ -66,7 +68,7 @@ const videoCategories: VideoCategory[] = [
   },
   {
     id: "small-students",
-    title: "Learning for Young Students",
+    titleKey: "sampleVideos.learningForYoung",
     videos: removeDuplicates([
       { id: "58pw9qwY7bg", url: "https://www.youtube.com/watch?v=58pw9qwY7bg&t=319s" },
       { id: "vfnXDl4-bCw", url: "https://www.youtube.com/watch?v=vfnXDl4-bCw" },
@@ -79,7 +81,7 @@ const videoCategories: VideoCategory[] = [
   },
   {
     id: "senior-students-ielts",
-    title: "IELTS & Advanced Learning",
+    titleKey: "sampleVideos.ieltsAdvanced",
     videos: removeDuplicates([
       { id: "W50Ojdu1_AE", url: "https://www.youtube.com/watch?v=W50Ojdu1_AE" },
       { id: "UMAVKA887dI", url: "https://www.youtube.com/watch?v=UMAVKA887dI" },
@@ -104,7 +106,7 @@ const videoCategories: VideoCategory[] = [
   },
   {
     id: "tongue-twisters",
-    title: "Pronunciation Practice",
+    titleKey: "sampleVideos.pronunciationPractice",
     videos: removeDuplicates([
       { id: "xPXu5GoUHH0", url: "https://www.youtube.com/watch?v=xPXu5GoUHH0" },
     ])
@@ -112,7 +114,8 @@ const videoCategories: VideoCategory[] = [
 ]
 
 export function VideoContent({ onBack }: { onBack?: () => void }) {
-  const navigate = useNavigate()
+  const navigate = useLocalizedNavigate()
+  const { t } = useTranslation()
   const location = useLocation()
   const [selectedCategory, setSelectedCategory] = useState<VideoCategory | null>(null)
   const [selectedVideo, setSelectedVideo] = useState<VideoItem | null>(null)
@@ -275,7 +278,7 @@ export function VideoContent({ onBack }: { onBack?: () => void }) {
                   }}
                 >
                   <ArrowLeft style={{ width: "1rem", height: "1rem", marginRight: "0.5rem" }} />
-                  Back to Videos
+                  {t("sampleVideos.backToVideos")}
                 </Button>
               </div>
             </div>
@@ -355,7 +358,7 @@ export function VideoContent({ onBack }: { onBack?: () => void }) {
                 }}
               >
                 <ArrowLeft style={{ width: "1rem", height: "1rem", marginRight: "0.5rem" }} />
-                Back to Skills Home
+                {t("sampleVideos.backToSkillsHome")}
               </Button>
             </div>
           </div>
@@ -377,14 +380,14 @@ export function VideoContent({ onBack }: { onBack?: () => void }) {
                   letterSpacing: "-0.02em",
                   lineHeight: "1.2"
                 }}>
-                  Video Library
+                  {t("sampleVideos.title")}
                 </h2>
                 <p style={{ 
                   color: TEXT_MUTED,
                   fontSize: "1.125rem",
                   lineHeight: "1.6"
                 }}>
-                  Explore our curated collection of educational videos organized by category
+                  {t("sampleVideos.exploreVideos")}
                 </p>
               </div>
 
@@ -437,7 +440,7 @@ export function VideoContent({ onBack }: { onBack?: () => void }) {
                         fontWeight: 600,
                         letterSpacing: "-0.01em"
                       }}>
-                        {category.title}
+                        {t(category.titleKey)}
                       </CardTitle>
                       <p style={{
                         fontSize: "0.9375rem",
@@ -445,7 +448,7 @@ export function VideoContent({ onBack }: { onBack?: () => void }) {
                         margin: 0,
                         fontWeight: 500
                       }}>
-                        {category.videos.length} video{category.videos.length !== 1 ? "s" : ""} available
+                        {t("sampleVideos.videosAvailable", { count: category.videos.length })}
                       </p>
                     </CardHeader>
                   </Card>
@@ -479,7 +482,7 @@ export function VideoContent({ onBack }: { onBack?: () => void }) {
                   }}
                 >
                   <ArrowLeft style={{ width: "1rem", height: "1rem", marginRight: "0.5rem" }} />
-                  Back to Categories
+                  {t("sampleVideos.backToCategories")}
                 </Button>
                 <h2 style={{
                   fontSize: "2.5rem",
@@ -489,7 +492,7 @@ export function VideoContent({ onBack }: { onBack?: () => void }) {
                   letterSpacing: "-0.02em",
                   lineHeight: "1.2"
                 }}>
-                  {selectedCategory.title}
+                  {selectedCategory && t(selectedCategory.titleKey)}
                 </h2>
                 <div style={{
                   display: "flex",
@@ -507,7 +510,7 @@ export function VideoContent({ onBack }: { onBack?: () => void }) {
                     fontSize: "1rem",
                     margin: 0
                   }}>
-                    {selectedCategory.videos.length} video{selectedCategory.videos.length !== 1 ? "s" : ""} available
+                    {t("sampleVideos.videosAvailable", { count: selectedCategory?.videos.length ?? 0 })}
                   </p>
                 </div>
               </div>

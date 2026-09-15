@@ -1,22 +1,43 @@
-// API Configuration for DigitalOcean Functions
-// Update these URLs after deploying your functions to DigitalOcean
+// API Configuration - supports DigitalOcean Functions, Netlify Functions, and local dev
 
-const isLocal = import.meta.env.DEV || window.location.hostname === 'localhost';
+const isLocal =
+  import.meta.env.DEV ||
+  (typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'));
+const isNetlify = typeof window !== 'undefined' && window.location.hostname.includes('netlify.app');
 
-// DigitalOcean Function URLs
+// DigitalOcean Function URLs (used when deployed to DigitalOcean App Platform)
 const DO_BASE = 'https://faas-blr1-8177d592.doserverless.co/api/v1/web/fn-a38d3580-f602-4111-8967-d449fc5ef00e/default';
+const DO_SPEECH_PROXY_FALLBACK = `${DO_BASE}/speechProxy`;
+
+/** CI sometimes copies dev .env and bakes localhost or wrong proxy path into the bundle — never use that off this machine. */
+function sanitizeSpeechProxyUrl(candidate: string | undefined, fallback: string): string {
+  const s = String(candidate ?? '').trim();
+  if (!s) return fallback;
+  try {
+    const u = new URL(s);
+    const loopback = u.hostname === 'localhost' || u.hostname === '127.0.0.1';
+    if (loopback && !isLocal) return fallback;
+    return s;
+  } catch {
+    if (!isLocal && /localhost|127\.0\.0\.1/.test(s)) return fallback;
+    return s;
+  }
+}
+
 const DIGITALOCEAN_FUNCTIONS = {
-  speechProxy: import.meta.env.VITE_SPEECH_PROXY_URL || `${DO_BASE}/speechProxy`,
+  speechProxy: sanitizeSpeechProxyUrl(import.meta.env.VITE_SPEECH_PROXY_URL, DO_SPEECH_PROXY_FALLBACK),
   chatgptProxy: import.meta.env.VITE_CHATGPT_PROXY_URL || `${DO_BASE}/chatgptProxy`,
   authProxy: import.meta.env.VITE_AUTH_PROXY_URL || `${DO_BASE}/authProxy`,
   pdfProxy: import.meta.env.VITE_PDF_PROXY_URL || `${DO_BASE}/pdfProxy`,
   pdfExtractProxy: import.meta.env.VITE_PDF_EXTRACT_PROXY_URL || `${DO_BASE}/pdfExtractProxy`,
-  supportProxy: import.meta.env.VITE_SUPPORT_PROXY_URL || `${DO_BASE}/supportProxyServer`,
+  supportProxy: import.meta.env.VITE_SUPPORT_PROXY_URL || `${DO_BASE}/supportProxy`,
+  uploadPdfProxy: import.meta.env.VITE_UPLOAD_PDF_PROXY_URL || `${DO_BASE}/uploadPdfProxy`,
 };
 
 // Local development proxy URLs (if running proxy servers locally)
 const LOCAL_PROXIES = {
-  speechProxy: 'http://localhost:4000/speechProxy',
+  speechProxy: 'http://localhost:4000/speechProxy', // Language Confidence proxy only (not Azure)
   chatgptProxy: 'http://localhost:4001/chatgptProxy',
   authProxy: 'http://localhost:4001/authProxy',
   pdfProxy: 'http://localhost:4001/pdfProxy',
@@ -24,7 +45,7 @@ const LOCAL_PROXIES = {
   supportProxy: 'http://localhost:4002/supportProxy',
 };
 
-// Netlify function URLs (legacy - remove after migration)
+// Netlify function URLs (used when deployed to speazyai.netlify.app)
 const NETLIFY_FUNCTIONS = {
   speechProxy: '/.netlify/functions/speechProxy',
   chatgptProxy: '/.netlify/functions/chatgptProxy',
@@ -34,22 +55,21 @@ const NETLIFY_FUNCTIONS = {
   supportProxy: '/.netlify/functions/supportProxy',
 };
 
-// Choose which API provider to use
-// Set to 'digitalocean', 'local', or 'netlify'
-// Defaults to 'local' when running on localhost, 'digitalocean' otherwise
-const API_PROVIDER = (import.meta.env.VITE_API_PROVIDER || (isLocal ? 'local' : 'digitalocean')) as 'digitalocean' | 'local' | 'netlify';
+// Always use DigitalOcean proxy (including when on localhost).
+// Override with VITE_API_PROVIDER=local or netlify if needed.
+const API_PROVIDER = (import.meta.env.VITE_API_PROVIDER || 'digitalocean') as 'digitalocean' | 'local' | 'netlify';
 
 // Get the appropriate URL based on provider and environment
 function getApiUrl(functionName: keyof typeof DIGITALOCEAN_FUNCTIONS): string {
-  if (isLocal && API_PROVIDER === 'local') {
+  if (API_PROVIDER === 'local' && isLocal) {
     return LOCAL_PROXIES[functionName];
   }
-  
+
   switch (API_PROVIDER) {
     case 'digitalocean':
       return DIGITALOCEAN_FUNCTIONS[functionName];
     case 'local':
-      return LOCAL_PROXIES[functionName];
+      return DIGITALOCEAN_FUNCTIONS[functionName];
     case 'netlify':
       return NETLIFY_FUNCTIONS[functionName];
     default:
@@ -85,8 +105,13 @@ export const API_CONFIG = {
   urls: API_URLS,
 };
 
-// Base URL for direct Exelerate API calls (org, users, reading, ielts, etc.).
-// Always use the full API host, same as: curl --location 'https://api.exeleratetechnology.com/api/...' --header 'Authorization: Bearer <token>'
+// Base URL for direct API calls (org, users, reading, ielts, etc.).
 export const getExelerateApiBase = (): string => {
-  return 'https://api.exeleratetechnology.com';
+  return 'https://api.intelliviq.com';
+};
+
+// Upload PDF - use direct API. Backend (api.intelliviq.com/upload-pdf) must allow CORS for your origin.
+// Serverless proxies (Netlify, DigitalOcean) have ~6MB request limits causing 413 for larger PDFs.
+export const getUploadPdfUrl = (): string => {
+  return `${getExelerateApiBase()}/upload-pdf`;
 };

@@ -1,6 +1,6 @@
 /**
  * Utility functions for fetching weekly improvement data from the Exelerate API
- * API: GET https://api.exeleratetechnology.com/api/users/improvement-weekly.php
+ * API: GET https://api.intelliviq.com/api/users/improvement-weekly.php
  * Headers: Content-Type: application/json, Authorization: Bearer <token>
  * UI should show overall_improvement_text from response, or "0" if not present.
  */

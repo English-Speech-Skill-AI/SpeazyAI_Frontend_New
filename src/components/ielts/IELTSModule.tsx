@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
 import { ThemeToggle } from '../ThemeToggle';
@@ -9,47 +9,17 @@ import {
   Headphones, 
   Mic
 } from 'lucide-react';
+import { useLocalizedNavigate } from '../LocaleLayout';
 
 export function IELTSModule() {
-  const navigate = useNavigate();
+  const { t } = useTranslation();
+  const navigate = useLocalizedNavigate();
 
   const skills = [
-    {
-      id: 'reading',
-      title: 'READING',
-      description: 'Comprehension passages and analysis',
-      icon: BookOpen,
-      gradient: 'from-blue-500 to-cyan-600',
-      glowColor: 'shadow-blue-500/50',
-      path: '/ielts/reading'
-    },
-    {
-      id: 'writing',
-      title: 'WRITING',
-      description: 'Essay composition with AI feedback',
-      icon: PenTool,
-      gradient: 'from-green-500 to-emerald-600',
-      glowColor: 'shadow-green-500/50',
-      path: '/ielts/writing'
-    },
-    {
-      id: 'listening',
-      title: 'LISTENING',
-      description: 'Audio comprehension exercises',
-      icon: Headphones,
-      gradient: 'from-purple-500 to-indigo-600',
-      glowColor: 'shadow-purple-500/50',
-      path: '/ielts/listening'
-    },
-    {
-      id: 'speaking',
-      title: 'SPEAKING',
-      description: 'Voice recording and pronunciation',
-      icon: Mic,
-      gradient: 'from-pink-500 to-rose-600',
-      glowColor: 'shadow-pink-500/50',
-      path: '/ielts/speaking'
-    }
+    { id: 'reading', titleKey: 'modules.ielts.reading', descKey: 'modules.ielts.readingDesc', icon: BookOpen, gradient: 'from-blue-500 to-cyan-600', glowColor: 'shadow-blue-500/50', path: '/ielts/reading' },
+    { id: 'writing', titleKey: 'modules.ielts.writing', descKey: 'modules.ielts.writingDesc', icon: PenTool, gradient: 'from-green-500 to-emerald-600', glowColor: 'shadow-green-500/50', path: '/ielts/writing' },
+    { id: 'listening', titleKey: 'modules.ielts.listening', descKey: 'modules.ielts.listeningDesc', icon: Headphones, gradient: 'from-purple-500 to-indigo-600', glowColor: 'shadow-purple-500/50', path: '/ielts/listening' },
+    { id: 'speaking', titleKey: 'modules.ielts.speaking', descKey: 'modules.ielts.speakingDesc', icon: Mic, gradient: 'from-pink-500 to-rose-600', glowColor: 'shadow-pink-500/50', path: '/ielts/speaking' }
   ];
 
   return (
@@ -63,11 +33,11 @@ export function IELTSModule() {
               className="text-gray-400 hover:text-white dark:text-gray-400 dark:hover:text-white light:text-gray-600 light:hover:text-gray-900 uppercase text-xs tracking-wider"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
+              {t('modules.back')}
             </Button>
             
             <h1 className="text-lg font-bold text-white dark:text-white light:text-gray-900 uppercase tracking-wider">
-              IELTS Module
+              {t('modules.ielts.moduleTitle')}
             </h1>
 
             <ThemeToggle />
@@ -79,11 +49,11 @@ export function IELTSModule() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="text-center mb-16">
             <h2 className="text-5xl font-bold text-white dark:text-white light:text-gray-900 mb-4 uppercase tracking-wider">
-              IELTS PREPARATION
+              {t('modules.ielts.preparation')}
             </h2>
             <div className="w-24 h-1 bg-gradient-to-r from-pink-500 to-purple-600 mx-auto mb-6" />
             <p className="text-xl text-gray-400 dark:text-gray-400 light:text-gray-600 uppercase tracking-wide">
-              Master all four skills
+              {t('modules.ielts.masterSkills')}
             </p>
           </div>
 
@@ -100,10 +70,10 @@ export function IELTSModule() {
                     <skill.icon className="w-10 h-10 text-white" />
                   </div>
                   <h3 className="text-xl font-bold text-white dark:text-white light:text-gray-900 mb-2 uppercase tracking-wider group-hover:text-pink-400 transition-colors">
-                    {skill.title}
+                    {t(skill.titleKey)}
                   </h3>
                   <p className="text-gray-400 dark:text-gray-400 light:text-gray-600 text-sm">
-                    {skill.description}
+                    {t(skill.descKey)}
                   </p>
                 </CardContent>
               </Card>

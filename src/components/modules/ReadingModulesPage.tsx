@@ -1,59 +1,25 @@
 "use client"
 
-import { useNavigate } from "react-router-dom"
 import { Card, CardHeader, CardTitle } from "../ui/card"
 import { Button } from "../ui/button"
 import { ArrowLeft, BookOpen, Library, Video, BookText, BookMarked, BookOpenCheck } from "lucide-react"
 import { PageHeader } from "../PageHeader"
 import type { CSSProperties } from "react"
+import { useTranslation } from "react-i18next"
+import { useLocalizedNavigate } from "../LocaleLayout"
 
-const readingModules = [
-  {
-    id: "my-lessons",
-    title: "My Lessons",
-    description: "Continue your learning journey",
-    icon: BookOpen,
-    gradient: "linear-gradient(135deg, #246BCF 0%, #1E3A8A 100%)",
-  },
-  {
-    id: "stories",
-    title: "Stories",
-    description: "Explore engaging stories",
-    icon: BookMarked,
-    gradient: "linear-gradient(135deg, #3B82F6 0%, #00B9FC 100%)",
-  },
-  {
-    id: "novel",
-    title: "Novel",
-    description: "Read complete novels",
-    icon: BookOpenCheck,
-    gradient: "linear-gradient(135deg, #00B9FC 0%, #246BCF 100%)",
-  },
-  {
-    id: "content-library",
-    title: "Content Library",
-    description: "Explore reading materials",
-    icon: Library,
-    gradient: "linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%)",
-  },
-  {
-    id: "phoneme-guide",
-    title: "Phoneme Guide",
-    description: "Learn pronunciation patterns",
-    icon: BookText,
-    gradient: "linear-gradient(135deg, #3B82F6 0%, #FFD600 100%)",
-  },
-  {
-    id: "sample-videos",
-    title: "Sample Videos",
-    description: "Watch educational video content",
-    icon: Video,
-    gradient: "linear-gradient(135deg, #246BCF 0%, #1E3A8A 100%)",
-  },
+const readingModuleIds = [
+  { id: "my-lessons", titleKey: "modules.reading.myLessons", descKey: "modules.reading.myLessonsDesc", icon: BookOpen, gradient: "linear-gradient(135deg, #246BCF 0%, #1E3A8A 100%)" },
+  { id: "stories", titleKey: "modules.reading.stories", descKey: "modules.reading.storiesDesc", icon: BookMarked, gradient: "linear-gradient(135deg, #3B82F6 0%, #00B9FC 100%)" },
+  { id: "novel", titleKey: "modules.reading.novel", descKey: "modules.reading.novelDesc", icon: BookOpenCheck, gradient: "linear-gradient(135deg, #00B9FC 0%, #246BCF 100%)" },
+  { id: "content-library", titleKey: "modules.reading.contentLibrary", descKey: "modules.reading.contentLibraryDesc", icon: Library, gradient: "linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%)" },
+  { id: "phoneme-guide", titleKey: "modules.reading.phonemeGuide", descKey: "modules.reading.phonemeGuideDesc", icon: BookText, gradient: "linear-gradient(135deg, #3B82F6 0%, #FFD600 100%)" },
+  { id: "sample-videos", titleKey: "modules.reading.sampleVideos", descKey: "modules.reading.sampleVideosDesc", icon: Video, gradient: "linear-gradient(135deg, #246BCF 0%, #1E3A8A 100%)" },
 ]
 
 export function ReadingModulesPage() {
-  const navigate = useNavigate()
+  const { t } = useTranslation()
+  const navigate = useLocalizedNavigate()
 
   const BLUE_BG: CSSProperties = {
     backgroundColor: "#1E3A8A",
@@ -95,17 +61,17 @@ export function ReadingModulesPage() {
               className="text-white hover:bg-white/10 mb-8 rounded-2xl"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
+              {t("modules.back")}
             </Button>
             <div className="text-center">
-              <h2 className="text-3xl font-bold text-white mb-3">Reading</h2>
-              <p className="text-base text-white/80">Choose your learning path</p>
+              <h2 className="text-3xl font-bold text-white mb-3">{t("modules.reading.title")}</h2>
+              <p className="text-base text-white/80">{t("modules.chooseLearningPath")}</p>
             </div>
           </div>
 
           <div className="flex justify-center py-8">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl w-full">
-            {readingModules.map((module) => (
+            {readingModuleIds.map((module) => (
               <Card
                 key={module.id}
                 className="group bg-white border-0 cursor-pointer transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl relative overflow-hidden rounded-3xl h-full flex flex-col"
@@ -144,14 +110,14 @@ export function ReadingModulesPage() {
                       fontWeight: 600,
                     }}
                   >
-                    {module.title}
+                    {t(module.titleKey)}
                   </CardTitle>
                   <p style={{ 
                     fontSize: "14px", 
                     color: "rgba(30, 58, 138, 0.7)",
                     lineHeight: "1.5",
                   }}>
-                    {module.description}
+                    {t(module.descKey)}
                   </p>
                 </CardHeader>
               </Card>

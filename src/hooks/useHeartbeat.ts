@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 interface UseHeartbeatOptions {
   token: string | null;
   sessionId: string | null;
-  apiBaseUrl: string; // e.g. "https://api.exeleratetechnology.com/api"
+  apiBaseUrl: string; // e.g. "https://api.intelliviq.com/api"
   intervalMs?: number;
 }
 

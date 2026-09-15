@@ -3,6 +3,7 @@ import { Button } from "../ui/button";
 import { ArrowLeft, Star, Sparkles, FileText, Scale, TrendingUp, BarChart3, AlertCircle, Target } from "lucide-react";
 import { WritingPracticeQuestion } from "./WritingPracticeQuestion";
 import type { CSSProperties } from "react";
+import { useTranslation } from "react-i18next";
 
 interface WritingAdvancedProps {
   onBack: () => void;
@@ -85,6 +86,7 @@ const advancedTiles: AdvancedTile[] = [
 ];
 
 export function WritingAdvanced({ onBack }: WritingAdvancedProps) {
+  const { t } = useTranslation();
   const [currentView, setCurrentView] = useState<AdvancedView>("topics");
   const [selectedTile, setSelectedTile] = useState<AdvancedTile | null>(null);
 
@@ -291,10 +293,10 @@ export function WritingAdvanced({ onBack }: WritingAdvancedProps) {
               }}
             >
               <ArrowLeft style={{ width: "16px", height: "16px", marginRight: "8px" }} />
-              Back to Levels
+              {t("writingPractice.backToLevels")}
             </Button>
             <h1 style={{ fontSize: "20px", color: "white", fontWeight: "bold", margin: 0 }}>
-              Advanced Writing (IELTS)
+              {t("writingPractice.advancedWritingIelts")}
             </h1>
             <div style={{ width: "128px" }} />
           </div>
@@ -303,8 +305,8 @@ export function WritingAdvanced({ onBack }: WritingAdvancedProps) {
 
       <div style={styles.mainContent}>
         <div style={styles.headingContainer}>
-          <h2 style={styles.heading}>Master IELTS Writing</h2>
-          <p style={styles.subheading}>Choose an IELTS writing task to practice your skills</p>
+          <h2 style={styles.heading}>{t("writingPractice.masterIeltsWriting")}</h2>
+          <p style={styles.subheading}>{t("writingPractice.chooseIeltsTask")}</p>
         </div>
 
         <div style={styles.gridContainer}>
@@ -383,7 +385,7 @@ export function WritingAdvanced({ onBack }: WritingAdvancedProps) {
         <div style={styles.encouragementContainer}>
           <div style={styles.encouragementBox}>
             <Star style={{ width: "24px", height: "24px", color: "#FFD600", animation: "spin 3s linear infinite" }} />
-            <span style={styles.encouragementText}>You're going to do great!</span>
+            <span style={styles.encouragementText}>{t("writingPractice.youreGoingToDoGreat")}</span>
             <Sparkles style={{ width: "24px", height: "24px", color: "white", animation: "pulse 2s ease-in-out infinite" }} />
           </div>
         </div>

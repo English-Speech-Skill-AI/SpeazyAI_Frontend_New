@@ -3,6 +3,7 @@ import { Button } from "../ui/button";
 import { ArrowLeft, Star, Sparkles, Smartphone, Users, Calendar, GraduationCap, Building2, Target } from "lucide-react";
 import { WritingPracticeQuestion } from "./WritingPracticeQuestion";
 import type { CSSProperties } from "react";
+import { useTranslation } from "react-i18next";
 
 interface WritingIntermediateProps {
   onBack: () => void;
@@ -85,6 +86,7 @@ const intermediateTiles: IntermediateTile[] = [
 ];
 
 export function WritingIntermediate({ onBack }: WritingIntermediateProps) {
+  const { t } = useTranslation();
   const [currentView, setCurrentView] = useState<IntermediateView>("topics");
   const [selectedTile, setSelectedTile] = useState<IntermediateTile | null>(null);
 
@@ -305,10 +307,10 @@ export function WritingIntermediate({ onBack }: WritingIntermediateProps) {
               }}
             >
               <ArrowLeft style={{ width: "16px", height: "16px", marginRight: "8px" }} />
-              Back to Levels
+              {t("writingPractice.backToLevels")}
             </Button>
             <h1 style={{ fontSize: "20px", color: "white", fontWeight: "bold", margin: 0 }}>
-              Intermediate Writing
+              {t("writingPractice.intermediateWriting")}
             </h1>
             <div style={{ width: "128px" }} />
           </div>
@@ -317,8 +319,8 @@ export function WritingIntermediate({ onBack }: WritingIntermediateProps) {
 
       <div style={styles.mainContent}>
         <div style={styles.headingContainer}>
-          <h2 style={styles.heading}>Let's Write Together!</h2>
-          <p style={styles.subheading}>Choose a writing topic to practice your skills</p>
+          <h2 style={styles.heading}>{t("writingPractice.letsWriteTogether")}</h2>
+          <p style={styles.subheading}>{t("writingPractice.chooseTopicToPractice")}</p>
         </div>
 
         <div style={styles.gridContainer}>
@@ -397,7 +399,7 @@ export function WritingIntermediate({ onBack }: WritingIntermediateProps) {
         <div style={styles.encouragementContainer}>
           <div style={styles.encouragementBox}>
             <Star style={{ width: "24px", height: "24px", color: "#FFD600", animation: "spin 3s linear infinite" }} />
-            <span style={styles.encouragementText}>You're going to do great!</span>
+            <span style={styles.encouragementText}>{t("writingPractice.youreGoingToDoGreat")}</span>
             <Sparkles style={{ width: "24px", height: "24px", color: "white", animation: "pulse 2s ease-in-out infinite" }} />
           </div>
         </div>

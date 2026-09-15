@@ -1,6 +1,8 @@
 "use client"
 
-import { useNavigate, useLocation } from "react-router-dom"
+import { useTranslation } from "react-i18next"
+import { useLocation } from "react-router-dom"
+import { useLocalizedNavigate } from "./LocaleLayout"
 import { Button } from "./ui/button"
 import { ArrowLeft } from "lucide-react"
 import { useState, useRef } from "react"
@@ -78,7 +80,8 @@ const consonants: Phoneme[] = [
 ]
 
 export function PhonemeGuide() {
-  const navigate = useNavigate()
+  const { t } = useTranslation()
+  const navigate = useLocalizedNavigate()
   const location = useLocation()
   const backRoute = (location.state as any)?.backRoute || "/reading-modules"
   const [playingSymbol, setPlayingSymbol] = useState<string | null>(null)
@@ -467,9 +470,9 @@ export function PhonemeGuide() {
               }}
             >
               <ArrowLeft style={{ width: '16px', height: '16px', marginRight: '8px' }} />
-              Back
+              {t("phonemeGuide.back")}
             </Button>
-            <h1 style={titleStyle}>Phoneme Guide</h1>
+            <h1 style={titleStyle}>{t("phonemeGuide.title")}</h1>
             <div style={{ width: '40px', height: '40px' }} />
           </div>
         </div>
@@ -490,14 +493,14 @@ export function PhonemeGuide() {
         }}
       >
         <div style={wrapperStyle}>
-          <h2 style={chartTitleStyle}>Phonemic Chart</h2>
+          <h2 style={chartTitleStyle}>{t("phonemeGuide.phonemicChart")}</h2>
 
           <div style={mainContentStyle}>
             <div style={chartSectionStyle}>
               {/* Vowels Section */}
               <div style={sectionStyle}>
                 <div style={sectionContainerStyle}>
-                  <div style={sectionLabelStyle}>Vowels</div>
+                  <div style={sectionLabelStyle}>{t("phonemeGuide.vowels")}</div>
                   <div style={chartContentStyle}>
                     {vowelRows.map((row, rowIndex) => (
                       <div key={`vowel-row-${rowIndex}`} style={rowStyle}>
@@ -511,7 +514,7 @@ export function PhonemeGuide() {
               {/* Consonants Section */}
               <div style={sectionStyle}>
                 <div style={sectionContainerStyle}>
-                  <div style={sectionLabelStyle}>Consonants</div>
+                  <div style={sectionLabelStyle}>{t("phonemeGuide.consonants")}</div>
                   <div style={chartContentStyle}>
                     {consonantRows.map((row, rowIndex) => (
                       <div key={`consonant-row-${rowIndex}`} style={rowStyle}>
@@ -549,7 +552,7 @@ export function PhonemeGuide() {
 
             {/* Legend - Right Side */}
             <div style={legendStyle}>
-              <h3 style={legendTitleStyle}>Phonemic Chart</h3>
+              <h3 style={legendTitleStyle}>{t("phonemeGuide.phonemicChart")}</h3>
               <div style={legendListStyle}>
                 <div
                   data-legend-item="true"
@@ -570,7 +573,7 @@ export function PhonemeGuide() {
                   }}
                 >
                   <div style={legendColorBoxStyle('#F5E6D3')} />
-                  <span style={legendTextStyle}>short</span>
+                  <span style={legendTextStyle}>{t("phonemeGuide.short")}</span>
                 </div>
                 <div
                   data-legend-item="true"
@@ -591,7 +594,7 @@ export function PhonemeGuide() {
                   }}
                 >
                   <div style={legendColorBoxStyle('#FFE4B5')} />
-                  <span style={legendTextStyle}>long</span>
+                  <span style={legendTextStyle}>{t("phonemeGuide.long")}</span>
                 </div>
                 <div
                   data-legend-item="true"
@@ -612,7 +615,7 @@ export function PhonemeGuide() {
                   }}
                 >
                   <div style={legendColorBoxStyle('#FFA500')} />
-                  <span style={legendTextStyle}>diphthongs</span>
+                  <span style={legendTextStyle}>{t("phonemeGuide.diphthongs")}</span>
                 </div>
                 <div
                   data-legend-item="true"
@@ -633,7 +636,7 @@ export function PhonemeGuide() {
                   }}
                 >
                   <div style={legendColorBoxStyle('#ADD8E6')} />
-                  <span style={legendTextStyle}>voiced</span>
+                  <span style={legendTextStyle}>{t("phonemeGuide.voiced")}</span>
                 </div>
                 <div
                   data-legend-item="true"
@@ -654,7 +657,7 @@ export function PhonemeGuide() {
                   }}
                 >
                   <div style={legendColorBoxStyle('#90EE90')} />
-                  <span style={legendTextStyle}>unvoiced</span>
+                  <span style={legendTextStyle}>{t("phonemeGuide.unvoiced")}</span>
                 </div>
               </div>
             </div>

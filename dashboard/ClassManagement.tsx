@@ -146,7 +146,7 @@ export function ClassManagement() {
   ])
 
   const menuItems = [
-    { id: "english-skill-ai", label: "English Skill AI", icon: Mic2, route: "/skills-home" },
+    { id: "english-pro-ai", label: "English Pro AI", icon: Mic2, route: "/skills-home" },
     { id: "dashboard", label: "Dashboard", icon: Briefcase, route: "/edu/home" },
     { id: "class-management", label: "Class Management", icon: Users, route: "/class-management", active: true },
     { id: "license-management", label: "License Management", icon: Shield, route: "/license-management" },
@@ -1001,7 +1001,7 @@ export function ClassManagement() {
               }}
               onClick={() => navigate("/skills-home")}
             >
-              ENGLISH SKILL AI
+              English Pro AI
             </h2>
           )}
           <button

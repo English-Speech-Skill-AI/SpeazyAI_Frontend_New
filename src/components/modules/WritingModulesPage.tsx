@@ -1,48 +1,20 @@
 "use client"
 
-import { useNavigate } from "react-router-dom"
 import { Card, CardHeader, CardTitle } from "../ui/card"
 import { Button } from "../ui/button"
-import { ArrowLeft, FileText, PenTool } from "lucide-react"
+import { ArrowLeft, PenTool } from "lucide-react"
 import { PageHeader } from "../PageHeader"
 import type { CSSProperties } from "react"
+import { useTranslation } from "react-i18next"
+import { useLocalizedNavigate } from "../LocaleLayout"
 
-const writingModules = [
-  {
-    id: "writing-practice",
-    title: "Writing Practice",
-    description: "Structured writing exercises",
-    icon: PenTool,
-    gradient: "linear-gradient(135deg, #3B82F6 0%, #00B9FC 100%)",
-  },
-]
-
-const writingLevelsModules = [
-  {
-    id: "writing-beginner",
-    title: "Beginner",
-    description: "Start your writing journey",
-    icon: PenTool,
-    color: "from-[#3B82F6] to-[#00B9FC]",
-  },
-  {
-    id: "writing-intermediate",
-    title: "Intermediate",
-    description: "Build your writing skills",
-    icon: PenTool,
-    color: "from-[#00B9FC] to-[#246BCF]",
-  },
-  {
-    id: "writing-advanced",
-    title: "Advanced",
-    description: "Master creative writing",
-    icon: PenTool,
-    color: "from-[#246BCF] to-[#1E3A8A]",
-  },
+const writingModuleIds = [
+  { id: "writing-practice", titleKey: "modules.writing.writingPractice", descKey: "modules.writing.writingPracticeDesc", icon: PenTool, gradient: "linear-gradient(135deg, #3B82F6 0%, #00B9FC 100%)" },
 ]
 
 export function WritingModulesPage() {
-  const navigate = useNavigate()
+  const { t } = useTranslation()
+  const navigate = useLocalizedNavigate()
 
   const BLUE_BG: CSSProperties = {
     backgroundColor: "#1E3A8A",
@@ -89,7 +61,7 @@ export function WritingModulesPage() {
 
           <div className="flex justify-center py-8">
             <div className="grid grid-cols-1 gap-8 max-w-md w-full">
-              {writingModules.map((module) => (
+              {writingModuleIds.map((module) => (
               <Card
                 key={module.id}
                 className="group bg-white border-0 cursor-pointer transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl relative overflow-hidden rounded-3xl h-full flex flex-col"
@@ -128,14 +100,14 @@ export function WritingModulesPage() {
                       fontWeight: 600,
                     }}
                   >
-                    {module.title}
+                    {t(module.titleKey)}
                   </CardTitle>
                   <p style={{ 
                     fontSize: "14px", 
                     color: "rgba(30, 58, 138, 0.7)",
                     lineHeight: "1.5",
                   }}>
-                    {module.description}
+                    {t(module.descKey)}
                   </p>
                 </CardHeader>
               </Card>

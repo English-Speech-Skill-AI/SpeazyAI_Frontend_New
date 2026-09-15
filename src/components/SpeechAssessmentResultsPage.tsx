@@ -1,6 +1,7 @@
 "use client"
 
 import { useNavigate, useLocation } from "react-router-dom"
+import { useTranslation } from "react-i18next"
 import { Button } from "./ui/button"
 import { ArrowLeft } from "lucide-react"
 import { SpeechAssessmentResults } from "./SpeechAssessmentResults"
@@ -8,10 +9,12 @@ import { PageHeader } from "./PageHeader"
 import type { CSSProperties } from "react"
 import { useAuth } from "../contexts/AuthContext"
 import { useEffect, useRef } from "react"
+import { useConfetti } from "../hooks/useConfetti"
 
 export function SpeechAssessmentResultsPage() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { t } = useTranslation()
   const { token, authData } = useAuth()
   const hasSavedRef = useRef(false)
   
@@ -21,7 +24,12 @@ export function SpeechAssessmentResultsPage() {
 
   // Get data from navigation state
   const { apiResponse, chapter, classData, backRoute, lessonTitle, lessonId, speech, audioUrl } = (location.state as any) || {}
-  
+
+  // Celebration confetti when results are shown (only when score > 50%)
+  const overallScore = apiResponse?.overall?.overall_score ?? 0
+  const showConfetti = !!(apiResponse && !apiResponse.error && overallScore > 50)
+  useConfetti(showConfetti)
+
   // Also handle cases where audioUrl might be passed through different state structures
   const finalAudioUrl = audioUrl || (apiResponse?.audioUrl)
   
@@ -194,7 +202,7 @@ export function SpeechAssessmentResultsPage() {
         console.log("[Save Result] payload.result.reading:", payload.result?.reading)
         console.log("[Save Result] payload.metadata:", payload.metadata)
 
-        const response = await fetch("https://api.exeleratetechnology.com/api/speaking/save-result.php", {
+        const response = await fetch("https://api.intelliviq.com/api/speaking/save-result.php", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -289,7 +297,7 @@ export function SpeechAssessmentResultsPage() {
               marginRight: "8px",
             }}
           />
-          Back
+          {t("speechResults.back")}
         </Button>
 
         {/* Speech Assessment Results */}

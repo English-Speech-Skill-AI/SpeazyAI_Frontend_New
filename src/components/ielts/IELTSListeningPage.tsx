@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLocalizedNavigate } from '../LocaleLayout';
 import { ArrowLeft, Headphones, Loader2, AlertCircle, LogOut } from 'lucide-react';
 
 interface ListeningItem {
@@ -22,7 +23,8 @@ interface ListeningResponse {
 }
 
 export function IELTSListeningPage() {
-  const navigate = useNavigate();
+  const { t } = useTranslation();
+  const navigate = useLocalizedNavigate();
   const { token, logout } = useAuth();
   const [items, setItems] = useState<ListeningItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,7 +44,7 @@ export function IELTSListeningPage() {
         setError(null);
 
         const response = await fetch(
-          'https://api.exeleratetechnology.com/api/ielts/listening/content/list.php',
+          'https://api.intelliviq.com/api/ielts/listening/content/list.php',
           {
             method: 'GET',
             headers: {
@@ -65,7 +67,7 @@ export function IELTSListeningPage() {
         }
       } catch (err: any) {
         console.error('Error fetching listening content:', err);
-        setError(err.message || 'Failed to load listening content. Please try again.');
+        setError(err.message || t('modules.ielts.loadFailed'));
         setItems([]);
       } finally {
         setLoading(false);
@@ -73,7 +75,7 @@ export function IELTSListeningPage() {
     };
 
     fetchListeningItems();
-  }, [token]);
+  }, [token, t]);
 
   const handleTileClick = (item: ListeningItem) => {
     const contentId = item.content_id || item.id.toString();
@@ -207,11 +209,11 @@ export function IELTSListeningPage() {
             }}
           >
             <ArrowLeft style={{ width: '16px', height: '16px', marginRight: '8px' }} />
-            Back
+            {t('modules.back')}
           </button>
           <h1 style={titleStyle}>
             <Headphones style={{ width: '24px', height: '24px', color: '#a855f7' }} />
-            IELTS Listening
+            {t('modules.ielts.listening')}
           </h1>
           <button
             onClick={() => {
@@ -258,7 +260,7 @@ export function IELTSListeningPage() {
         {loading ? (
           <div style={loadingStyle}>
             <Loader2 style={{ width: '48px', height: '48px', animation: 'spin 1s linear infinite', color: '#a855f7' }} />
-            <p style={{ color: '#d1d5db' }}>Loading listening content...</p>
+            <p style={{ color: '#d1d5db' }}>{t('modules.ielts.loadingListening')}</p>
           </div>
         ) : items.length === 0 ? (
           <div style={loadingStyle}>
@@ -289,7 +291,7 @@ export function IELTSListeningPage() {
                   {item.title}
                 </div>
                 <div style={tileDescriptionStyle}>
-                  Click to start listening exercise
+                  {t('modules.listening.clickToView')}
                 </div>
               </div>
             ))}

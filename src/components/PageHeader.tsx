@@ -1,15 +1,28 @@
 "use client"
 
-import { useNavigate } from "react-router-dom"
+import { useLocalizedNavigate } from "./LocaleLayout"
 import { useState, useEffect } from "react"
+import { useLocation } from "react-router-dom"
 import { Button } from "./ui/button"
 import { MelloEyes } from "./MelloEyes"
-import { Star, LogOut, LayoutDashboard } from "lucide-react"
+import { Star, LogOut, LayoutDashboard, Languages } from "lucide-react"
 import { useAuth } from "../contexts/AuthContext"
+import { useLanguage } from "./LocaleLayout"
+import { useTranslation } from "react-i18next"
 import { fetchStreakData } from "../utils/streakApi"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
+
+const LANGUAGE_OPTIONS = [
+  { value: "en" as const, label: "English" },
+  { value: "ar" as const, label: "العربية" },
+]
 
 export function PageHeader() {
-  const navigate = useNavigate()
+  const { t } = useTranslation()
+  const { locale, setLocale } = useLanguage()
+  const navigate = useLocalizedNavigate()
+  const location = useLocation()
+  const isResultsPage = location.pathname.includes("/results")
   const { authData, logout, token } = useAuth()
   const [streakDays, setStreakDays] = useState<number>(0)
   const [loadingStreak, setLoadingStreak] = useState(true)
@@ -21,7 +34,7 @@ export function PageHeader() {
 
   const handleLogout = () => {
     logout()
-    navigate("/login", { replace: true })
+    navigate("/login", { replace: true } as { replace?: boolean })
   }
 
   // Fetch streak data on mount and when token changes
@@ -109,7 +122,7 @@ export function PageHeader() {
                 color: "#FFFFFF",
               }}
             >
-              English Skill AI
+              {t("home.brand")}
             </h1>
           </div>
 
@@ -120,6 +133,38 @@ export function PageHeader() {
               gap: "16px",
             }}
           >
+            {!isResultsPage && (
+            <Select value={locale} onValueChange={(v) => setLocale(v as "en" | "ar")}>
+              <SelectTrigger
+                style={{
+                  width: 120,
+                  height: 36,
+                  padding: "0 12px",
+                  gap: 8,
+                  border: "1px solid rgba(255,255,255,0.2)",
+                  backgroundColor: "rgba(255,255,255,0.1)",
+                  color: "#FFFFFF",
+                }}
+              >
+                <Languages style={{ width: 16, height: 16, opacity: 0.9 }} />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent
+                style={{ backgroundColor: "#1E3A8A", color: "#F2F6FF", borderColor: "rgba(255,255,255,0.2)" }}
+                viewportStyle={{ padding: 8, height: "auto", display: "flex", flexDirection: "column", gap: 4 }}
+              >
+                {LANGUAGE_OPTIONS.map((opt) => (
+                  <SelectItem
+                    key={opt.value}
+                    value={opt.value}
+                    style={{ padding: "8px 12px", paddingRight: 32, fontSize: 14, color: "#F2F6FF", borderRadius: 6 }}
+                  >
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            )}
             <div
               className="streak-badge"
               style={{
@@ -147,7 +192,7 @@ export function PageHeader() {
                   color: "#FFFFFF",
                 }}
               >
-                {loadingStreak ? "..." : `${streakDays} day${streakDays !== 1 ? 's' : ''} streak`}
+                {loadingStreak ? "..." : streakDays === 1 ? t("dashboard.dayStreak", { count: streakDays }) : t("dashboard.daysStreak", { count: streakDays })}
               </span>
             </div>
 
@@ -155,7 +200,7 @@ export function PageHeader() {
               variant="ghost"
               size="sm"
               onClick={() => navigate("/progress-dashboard")}
-              title="Progress Dashboard"
+              title={t("dashboard.progressDashboard")}
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.1)"
               }}
@@ -176,6 +221,7 @@ export function PageHeader() {
               variant="ghost"
               size="sm"
               onClick={() => navigate("/profile")}
+              title={t("dashboard.profile")}
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.1)"
               }}

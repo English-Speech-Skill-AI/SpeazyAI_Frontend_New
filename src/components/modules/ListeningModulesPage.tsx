@@ -1,17 +1,17 @@
 "use client"
 
-import { useNavigate } from "react-router-dom"
 import { Button } from "../ui/button"
-import { Input } from "../ui/input"
 import { ArrowLeft, Play, Pause, Loader2, Volume2, Radio, Music } from "lucide-react"
 import { PageHeader } from "../PageHeader"
 import type { CSSProperties } from "react"
 import { useState, useEffect, useRef } from "react"
 import { useAuth } from "../../contexts/AuthContext"
-import { API_URLS } from '@/config/apiConfig';
+import { API_URLS } from '@/config/apiConfig'
+import { useTranslation } from "react-i18next"
+import { useLocalizedNavigate } from "../LocaleLayout"
 
-const API_URL = "https://api.exeleratetechnology.com/api/content/list_bundle.php?section=listening"
-const SAVE_RESULT_API = "https://api.exeleratetechnology.com/api/listening/save-result.php"
+const API_URL = "https://api.intelliviq.com/api/content/list_bundle.php?section=listening"
+const SAVE_RESULT_API = "https://api.intelliviq.com/api/listening/save-result.php"
 
 type PracticeLevel = "BEGINNER" | "INTERMEDIATE" | "ADVANCED" | null
 
@@ -49,7 +49,8 @@ interface EvaluationResult {
 }
 
 export function ListeningModulesPage() {
-  const navigate = useNavigate()
+  const { t } = useTranslation()
+  const navigate = useLocalizedNavigate()
   const { token } = useAuth()
   const [selectedLevel, setSelectedLevel] = useState<PracticeLevel>(null)
   const [items, setItems] = useState<ListeningItem[]>([])
@@ -293,14 +294,14 @@ export function ListeningModulesPage() {
 
     const { questions, answers } = getQuestionsAndAnswers()
     if (questions.length === 0) {
-      alert("No questions available")
+      alert(t("modules.listening.noQuestionsAvailable"))
       return
     }
 
     // Check if user has answered at least one question
     const answeredCount = Object.keys(userAnswers).filter(key => userAnswers[parseInt(key)]?.trim()).length
     if (answeredCount === 0) {
-      alert("Please answer at least one question before submitting")
+      alert(t("modules.listening.answerOneQuestion"))
       return
     }
 
@@ -529,7 +530,7 @@ Be fair but strict. Consider partial credit for answers that are close but not e
 
     } catch (error) {
       console.error("Error evaluating answers:", error)
-      alert("Failed to evaluate answers. Please try again.")
+      alert(t("modules.listening.evaluateFailed"))
     } finally {
       setIsSubmitting(false)
     }
@@ -556,7 +557,7 @@ Be fair but strict. Consider partial credit for answers that are close but not e
               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
             >
               <ArrowLeft style={{ width: "16px", height: "16px", marginRight: "8px" }} />
-              Back
+              {t("modules.back")}
             </Button>
 
             <div style={{ backgroundColor: "white", borderRadius: "24px", boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)" }}>
@@ -608,11 +609,11 @@ Be fair but strict. Consider partial credit for answers that are close but not e
                 {loadingQuestions ? (
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "32px 0" }}>
                     <Loader2 style={{ width: "24px", height: "24px", animation: "spin 1s linear infinite", color: "#1E3A8A" }} />
-                    <span style={{ marginLeft: "8px", color: "#1E3A8A" }}>Loading questions...</span>
+                    <span style={{ marginLeft: "8px", color: "#1E3A8A" }}>{t("modules.listening.loadingQuestions")}</span>
                   </div>
                 ) : questions.length > 0 ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                    <h3 style={{ fontSize: "20px", fontWeight: "600", color: "#1E3A8A", margin: 0 }}>Questions & Answers</h3>
+                    <h3 style={{ fontSize: "20px", fontWeight: "600", color: "#1E3A8A", margin: 0 }}>{t("modules.listening.questionsAndAnswers")}</h3>
                     
                     {questions.map((question, idx) => {
                       const isWrong = evaluationResult?.answerResults && evaluationResult.answerResults[idx] === false
@@ -630,14 +631,14 @@ Be fair but strict. Consider partial credit for answers that are close but not e
                           }}
                         >
                           <p style={{ fontWeight: "600", color: "#1E3A8A", marginBottom: "8px", margin: "0 0 8px 0" }}>
-                            Question {idx + 1}:
+                            {t("modules.listening.question", { n: idx + 1 })}
                           </p>
                           <p style={{ color: "#374151", marginBottom: "12px", margin: "0 0 12px 0" }}>
                             {question}
                           </p>
                         <input
                           type="text"
-                          placeholder="Enter your answer here..."
+                          placeholder={t("modules.listening.enterAnswer")}
                           value={userAnswers[idx] || ""}
                           onChange={(e) => handleAnswerChange(idx, e.target.value)}
                           disabled={!!evaluationResult}
@@ -696,26 +697,26 @@ Be fair but strict. Consider partial credit for answers that are close but not e
                         {isSubmitting ? (
                           <>
                             <Loader2 style={{ width: "16px", height: "16px", marginRight: "8px", animation: "spin 1s linear infinite", display: "inline-block" }} />
-                            Evaluating...
+                            {t("modules.listening.evaluating")}
                           </>
                         ) : (
-                          "Submit Answers"
+                          t("modules.listening.submitAnswers")
                         )}
                       </Button>
                     )}
 
                     {evaluationResult && (
                       <div style={{ backgroundColor: "#f0fdf4", borderRadius: "8px", padding: "20px", border: "2px solid #86efac" }}>
-                        <h4 style={{ fontSize: "18px", fontWeight: "600", color: "#166534", margin: "0 0 16px 0" }}>Your Results</h4>
+                        <h4 style={{ fontSize: "18px", fontWeight: "600", color: "#166534", margin: "0 0 16px 0" }}>{t("modules.listening.yourResults")}</h4>
                         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <span style={{ color: "#166534", fontWeight: "500" }}>Score:</span>
+                            <span style={{ color: "#166534", fontWeight: "500" }}>{t("modules.listening.score")}</span>
                             <span style={{ fontSize: "20px", fontWeight: "bold", color: "#166534" }}>
                               {evaluationResult.mark}/{evaluationResult.total} ({evaluationResult.percentage}%)
                             </span>
                           </div>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <span style={{ color: "#166534", fontWeight: "500" }}>IELTS Band Score:</span>
+                            <span style={{ color: "#166534", fontWeight: "500" }}>{t("modules.listening.ieltsBandScore")}</span>
                             <span style={{ fontSize: "20px", fontWeight: "bold", color: "#166534" }}>
                               {evaluationResult.ieltsScore.toFixed(1)}
                             </span>
@@ -731,7 +732,7 @@ Be fair but strict. Consider partial credit for answers that are close but not e
                   </div>
                 ) : (
                   <div style={{ backgroundColor: "#fef3c7", borderRadius: "8px", padding: "16px", border: "1px solid #fde047" }}>
-                    <p style={{ color: "#92400e", margin: 0 }}>No questions available for this exercise</p>
+                    <p style={{ color: "#92400e", margin: 0 }}>{t("modules.listening.noQuestions")}</p>
                   </div>
                 )}
               </div>
@@ -765,20 +766,20 @@ Be fair but strict. Consider partial credit for answers that are close but not e
               </Button>
               <div style={{ textAlign: "center" }}>
                 <h2 style={{ fontSize: "30px", fontWeight: "bold", color: "white", marginBottom: "12px", margin: "0 0 12px 0", textTransform: "capitalize" }}>
-                  {selectedLevel} Listening
+                  {t("modules.listening.levelListening", { level: selectedLevel ? t(`modules.listening.${selectedLevel.toLowerCase()}`) : "" })}
                 </h2>
-                <p style={{ fontSize: "16px", color: "rgba(255, 255, 255, 0.8)", margin: 0 }}>Choose an exercise to practice</p>
+                <p style={{ fontSize: "16px", color: "rgba(255, 255, 255, 0.8)", margin: 0 }}>{t("modules.listening.chooseExercise")}</p>
               </div>
             </div>
 
             {loading ? (
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "64px 0" }}>
                 <Loader2 style={{ width: "32px", height: "32px", animation: "spin 1s linear infinite", color: "white" }} />
-                <span style={{ marginLeft: "12px", color: "white" }}>Loading exercises...</span>
+                <span style={{ marginLeft: "12px", color: "white" }}>{t("modules.listening.loadingExercises")}</span>
               </div>
             ) : items.length === 0 ? (
               <div style={{ textAlign: "center", padding: "64px 0" }}>
-                <p style={{ color: "white", fontSize: "18px", margin: 0 }}>No exercises available for this level</p>
+                <p style={{ color: "white", fontSize: "18px", margin: 0 }}>{t("modules.listening.noExercises")}</p>
               </div>
             ) : (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "24px" }}>
@@ -841,7 +842,7 @@ Be fair but strict. Consider partial credit for answers that are close but not e
                           margin: 0,
                         }}
                       >
-                        Click to view details and practice
+                        {t("modules.listening.clickToView")}
                       </p>
                     </div>
                   </div>
@@ -856,27 +857,9 @@ Be fair but strict. Consider partial credit for answers that are close but not e
 
   // Render level selection view
   const levelModules = [
-    {
-      id: "BEGINNER" as PracticeLevel,
-      title: "Beginner",
-      description: "Start with simple sounds and stories",
-      icon: Volume2,
-      gradient: "linear-gradient(135deg, #3B82F6 0%, #00B9FC 100%)",
-    },
-    {
-      id: "INTERMEDIATE" as PracticeLevel,
-      title: "Intermediate",
-      description: "Engage with stories and dialogues",
-      icon: Radio,
-      gradient: "linear-gradient(135deg, #00B9FC 0%, #246BCF 100%)",
-    },
-    {
-      id: "ADVANCED" as PracticeLevel,
-      title: "Advanced",
-      description: "Master complex listening skills",
-      icon: Music,
-      gradient: "linear-gradient(135deg, #246BCF 0%, #1E3A8A 100%)",
-    },
+    { id: "BEGINNER" as PracticeLevel, titleKey: "modules.listening.beginner", descKey: "modules.listening.beginnerDesc", icon: Volume2, gradient: "linear-gradient(135deg, #3B82F6 0%, #00B9FC 100%)" },
+    { id: "INTERMEDIATE" as PracticeLevel, titleKey: "modules.listening.intermediate", descKey: "modules.listening.intermediateDesc", icon: Radio, gradient: "linear-gradient(135deg, #00B9FC 0%, #246BCF 100%)" },
+    { id: "ADVANCED" as PracticeLevel, titleKey: "modules.listening.advanced", descKey: "modules.listening.advancedDesc", icon: Music, gradient: "linear-gradient(135deg, #246BCF 0%, #1E3A8A 100%)" },
   ]
 
   return (
@@ -899,8 +882,8 @@ Be fair but strict. Consider partial credit for answers that are close but not e
               Back
             </Button>
             <div style={{ textAlign: "center" }}>
-              <h2 style={{ fontSize: "30px", fontWeight: "bold", color: "white", marginBottom: "12px", margin: "0 0 12px 0" }}>Listening Modules</h2>
-              <p style={{ fontSize: "16px", color: "rgba(255, 255, 255, 0.8)", margin: 0 }}>Choose your learning path</p>
+              <h2 style={{ fontSize: "30px", fontWeight: "bold", color: "white", marginBottom: "12px", margin: "0 0 12px 0" }}>{t("modules.listening.title")}</h2>
+              <p style={{ fontSize: "16px", color: "rgba(255, 255, 255, 0.8)", margin: 0 }}>{t("modules.chooseLearningPath")}</p>
             </div>
           </div>
 
@@ -956,7 +939,7 @@ Be fair but strict. Consider partial credit for answers that are close but not e
                         margin: "0 0 8px 0",
                       }}
                     >
-                      {module.title}
+                      {t(module.titleKey)}
                     </h3>
                     <p
                       style={{
@@ -966,7 +949,7 @@ Be fair but strict. Consider partial credit for answers that are close but not e
                         margin: 0,
                       }}
                     >
-                      {module.description}
+                      {t(module.descKey)}
                     </p>
                   </div>
                 </div>

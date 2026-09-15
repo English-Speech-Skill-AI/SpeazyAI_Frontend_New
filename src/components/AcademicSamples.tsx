@@ -11,7 +11,7 @@ import { RecordingSection } from "./RecordingSection"
 import { ResultsSection } from "./ResultsSection"
 import { generateClassesData } from "./data"
 import type { RecordingState, ClassData, Chapter } from "./types"
-import { useNavigate } from "react-router-dom"
+import { useLocalizedNavigate } from "./LocaleLayout"
 import { PageHeader } from "./PageHeader"
 import type { CSSProperties } from "react"
 import { useAuth } from "../contexts/AuthContext"
@@ -21,7 +21,7 @@ interface AcademicSamplesProps {
 }
 
 export function AcademicSamples({ onBack }: AcademicSamplesProps) {
-  const navigate = useNavigate()
+  const navigate = useLocalizedNavigate()
   const { authData } = useAuth()
   const [expandedClass, setExpandedClass] = useState<string | null>(null)
   const [selectedChapter, setSelectedChapter] = useState<{

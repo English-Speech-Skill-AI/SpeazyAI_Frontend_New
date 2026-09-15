@@ -1,6 +1,8 @@
 "use client"
 
-import { useNavigate, useLocation } from "react-router-dom"
+import { useLocation } from "react-router-dom"
+import { useTranslation } from "react-i18next"
+import { useLocalizedNavigate } from "./LocaleLayout"
 import { Button } from "./ui/button"
 import { Card, CardHeader, CardTitle } from "./ui/card"
 import { ArrowLeft, BookOpenCheck, BookOpen, Library } from "lucide-react"
@@ -13,37 +15,19 @@ const BLUE_BG: CSSProperties = {
   backgroundSize: "cover",
 }
 
-const novels = [
-  {
-    id: "novel-1",
-    title: "The Mystery Island",
-    description: "An exciting adventure novel",
-    icon: BookOpenCheck,
-    color: "from-[#3B82F6] to-[#00B9FC]",
-  },
-  {
-    id: "novel-2",
-    title: "Chronicles of Wisdom",
-    description: "A tale of knowledge and courage",
-    icon: BookOpen,
-    color: "from-[#00B9FC] to-[#246BCF]",
-  },
-  {
-    id: "novel-3",
-    title: "The Great Journey",
-    description: "Discover the path ahead",
-    icon: Library,
-    color: "from-[#246BCF] to-[#1E3A8A]",
-  },
-]
-
 export function Novel() {
-  const navigate = useNavigate()
+  const navigate = useLocalizedNavigate()
+  const { t } = useTranslation()
+  const novels = [
+    { id: "novel-1", titleKey: "novel.mysteryIsland", descKey: "novel.mysteryIslandDesc", icon: BookOpenCheck, color: "from-[#3B82F6] to-[#00B9FC]" },
+    { id: "novel-2", titleKey: "novel.chroniclesOfWisdom", descKey: "novel.chroniclesDesc", icon: BookOpen, color: "from-[#00B9FC] to-[#246BCF]" },
+    { id: "novel-3", titleKey: "novel.greatJourney", descKey: "novel.greatJourneyDesc", icon: Library, color: "from-[#246BCF] to-[#1E3A8A]" },
+  ]
   const location = useLocation()
   const backRoute = (location.state as any)?.backRoute || "/reading-modules"
 
   const handleNovelClick = (novelId: string) => {
-    navigate(`/novel/${novelId}`, { state: { backRoute: "/novel" } })
+    navigate("/novel/" + novelId, { state: { backRoute: "/novel" } })
   }
 
   return (
@@ -60,9 +44,9 @@ export function Novel() {
               className="text-white hover:bg-white/10 rounded-2xl"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
+              {t("novel.back")}
             </Button>
-            <h1 className="text-xl font-semibold text-white">Novels</h1>
+            <h1 className="text-xl font-semibold text-white">{t("novel.title")}</h1>
             <div className="w-10 h-10" />
           </div>
         </div>
@@ -71,8 +55,8 @@ export function Novel() {
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="mb-8">
-            <h2 className="text-3xl font-bold text-white mb-2">Choose a Novel</h2>
-            <p className="text-base text-white/80">Read complete novels to improve your reading comprehension</p>
+            <h2 className="text-3xl font-bold text-white mb-2">{t("novel.chooseNovel")}</h2>
+            <p className="text-base text-white/80">{t("novel.chooseNovelDesc")}</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -88,8 +72,8 @@ export function Novel() {
                   >
                     <novel.icon className="w-8 h-8 text-white" />
                   </div>
-                  <CardTitle className="text-[#1E3A8A] text-xl mb-2">{novel.title}</CardTitle>
-                  <p className="text-sm text-[#1E3A8A]/70">{novel.description}</p>
+                  <CardTitle className="text-[#1E3A8A] text-xl mb-2">{t(novel.titleKey)}</CardTitle>
+                  <p className="text-sm text-[#1E3A8A]/70">{t(novel.descKey)}</p>
                 </CardHeader>
               </Card>
             ))}

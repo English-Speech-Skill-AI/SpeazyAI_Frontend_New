@@ -17,7 +17,9 @@ import {
   Sparkles,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { useLocalizedNavigate } from "./LocaleLayout";
 import { AudioRecorder } from "./audioRecorder";
 
 interface FamousSpeechesProps {
@@ -172,7 +174,8 @@ const speeches = [
 export function FamousSpeeches({
   onBack,
 }: FamousSpeechesProps) {
-  const navigate = useNavigate()
+  const { t } = useTranslation()
+  const navigate = useLocalizedNavigate()
   const location = useLocation()
   const backRoute = (location.state as any)?.backRoute || "/speaking-modules"
   
@@ -314,14 +317,14 @@ export function FamousSpeeches({
                 className="text-[#F2F6FF] hover:text-[#FFD600] hover:bg-white/10 transition-all duration-300"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Back
+                {t("famousSpeeches.back")}
               </Button>
             </div>
             <h1
               className="text-lg font-semibold"
               style={{ color: "#F2F6FF" }}
             >
-              Famous Speeches
+              {t("famousSpeeches.title")}
             </h1>
             <div></div>
           </div>
@@ -334,13 +337,13 @@ export function FamousSpeeches({
             className="text-3xl font-bold"
             style={{ color: "#F2F6FF" }}
           >
-            Learn from Great Speakers
+            {t("famousSpeeches.learnFromGreatSpeakers")}
           </h2>
           <p
             className="text-lg"
             style={{ color: "rgba(242, 246, 255, 0.7)" }}
           >
-            Discover amazing speeches that changed the world
+            {t("famousSpeeches.discoverSpeeches")}
           </p>
         </div>
 
@@ -459,7 +462,7 @@ export function FamousSpeeches({
                       e.currentTarget.style.opacity = "1";
                     }}
                   >
-                    Practice Speech
+                    {t("famousSpeeches.practiceSpeech")}
                   </Button>
                 </CardContent>
               </Card>
@@ -509,7 +512,7 @@ export function FamousSpeeches({
                 className="text-[#F2F6FF] hover:text-[#FFD600] hover:bg-white/10 transition-all duration-300"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Speeches
+                {t("famousSpeeches.backToSpeeches")}
               </Button>
               <h1
                 className="text-lg font-semibold"
@@ -578,7 +581,7 @@ export function FamousSpeeches({
                       className="text-lg font-bold mb-4"
                       style={{ color: "#1E3A8A" }}
                     >
-                      📖 Speech for Kids
+                      📖 {t("famousSpeeches.speechForKids")}
                     </h3>
                     <p
                       className="text-base leading-relaxed italic"
@@ -594,7 +597,7 @@ export function FamousSpeeches({
                     className="w-full bg-gradient-to-r from-[#3B82F6] to-[#00B9FC] hover:opacity-90 text-white rounded-lg px-6 transition-all duration-200"
                   >
                     <Sparkles className="w-5 h-5 mr-2" />
-                    Try Fun Activity
+                    {t("famousSpeeches.tryFunActivity")}
                   </Button>
                 </CardContent>
               </Card>
@@ -619,14 +622,13 @@ export function FamousSpeeches({
                     className="text-xl"
                     style={{ color: "#1E3A8A" }}
                   >
-                    🎤 Practice Reading
+                    🎤 {t("famousSpeeches.practiceReading")}
                   </CardTitle>
                   <p
                     className="text-sm mt-2"
                     style={{ color: "rgba(30, 58, 138, 0.7)" }}
                   >
-                    Read the speech aloud and get feedback on your
-                    pronunciation!
+                    {t("famousSpeeches.practiceReadingDesc")}
                   </p>
                 </CardHeader>
 
@@ -681,13 +683,13 @@ export function FamousSpeeches({
                 className="text-[#F2F6FF] hover:text-[#FFD600] hover:bg-white/10 transition-all duration-300"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Speech
+                {t("famousSpeeches.backToSpeech")}
               </Button>
               <h1
                 className="text-lg font-semibold"
                 style={{ color: "#F2F6FF" }}
               >
-                Fun Word Activity
+                {t("famousSpeeches.funWordActivity")}
               </h1>
               <div></div>
             </div>
@@ -707,10 +709,10 @@ export function FamousSpeeches({
                 className="text-2xl"
                 style={{ color: "#1E3A8A" }}
               >
-                🧩 Complete the Sentence!
+                🧩 {t("famousSpeeches.completeSentence")}
               </CardTitle>
               <p style={{ color: "rgba(30, 58, 138, 0.7)" }}>
-                Drag the words below to complete the sentence
+                {t("famousSpeeches.dragWords")}
               </p>
             </CardHeader>
 
@@ -779,7 +781,7 @@ export function FamousSpeeches({
                   className="text-lg font-bold"
                   style={{ color: "#1E3A8A" }}
                 >
-                  🎪 Word Bank
+                  🎪 {t("famousSpeeches.wordBank")}
                 </h3>
                 <div className="flex flex-wrap justify-center gap-4 mt-4">
                   {selectedSpeech.quizWords.map(
@@ -812,13 +814,13 @@ export function FamousSpeeches({
                         className="font-bold text-lg"
                         style={{ color: "#dc2626" }}
                       >
-                        Wrong Answer!
+                        {t("famousSpeeches.wrongAnswer")}
                       </p>
                       <p
                         className="text-sm mt-1"
                         style={{ color: "rgba(220, 38, 38, 0.8)" }}
                       >
-                        Please try again. You can drag another word to replace it.
+                        {t("famousSpeeches.tryAgainHint")}
                       </p>
                     </div>
                   </div>
@@ -832,12 +834,12 @@ export function FamousSpeeches({
                     className="text-2xl font-bold"
                     style={{ color: "#FFD600" }}
                   >
-                    Fantastic! You did it!
+                    {t("famousSpeeches.fantastic")}
                   </h3>
                   <p
                     style={{ color: "rgba(30, 58, 138, 0.7)" }}
                   >
-                    You completed the sentence perfectly!
+                    {t("famousSpeeches.completedPerfectly")}
                   </p>
                   <Button
                     size="lg"
@@ -849,7 +851,7 @@ export function FamousSpeeches({
                     className="bg-gradient-to-r from-[#3B82F6] to-[#00B9FC] hover:opacity-90 text-white rounded-lg px-6"
                   >
                     <RotateCcw className="w-5 h-5 mr-2" />
-                    Try Again
+                    {t("modules.ielts.tryAgain")}
                   </Button>
                 </div>
               )}

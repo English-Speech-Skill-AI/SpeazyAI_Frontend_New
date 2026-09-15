@@ -1,7 +1,7 @@
 
-  # SppechSkillsAi
+# EnglishProAI
 
-  This is a code bundle for SppechSkillsAi. The original project is available at https://www.figma.com/design/5EZd4fPq54udQcS9aT80rX/SppechSkillsAi.
+This is a code bundle for EnglishProAI. The original project is available at https://www.figma.com/design/5EZd4fPq54udQcS9aT80rX/EnglishProAI.
 
   ## Running the code
 

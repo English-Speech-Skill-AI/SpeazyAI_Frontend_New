@@ -11,8 +11,12 @@ import { motion } from "motion/react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { useAuth } from "../contexts/AuthContext"
 import { toast } from "sonner"
+import { useTranslation } from "react-i18next"
+import { useLocalizedPath } from "./LocaleLayout"
 
 export function LoginPage() {
+  const { t } = useTranslation()
+  const getPath = useLocalizedPath()
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -23,7 +27,10 @@ export function LoginPage() {
   const location = useLocation()
   const { login, isAuthenticated, loading } = useAuth()
   // Where to redirect after login: the page user was trying to open, or default dashboard
-  const fromPath = (location.state as { from?: { pathname?: string } })?.from?.pathname || "/skills-home"
+  const fromState = (location.state as { from?: { pathname?: string } })?.from
+  const fromPath = (fromState?.pathname && (fromState.pathname.startsWith("/en") || fromState.pathname.startsWith("/ar")))
+    ? fromState.pathname
+    : getPath("/skills-home")
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -31,12 +38,12 @@ export function LoginPage() {
     
     // Basic validation
     if (!email.trim()) {
-      setError("Please enter your email or username")
+      setError(t("login.validationEmail"))
       return
     }
     
     if (!password.trim()) {
-      setError("Please enter your password")
+      setError(t("login.validationPassword"))
       return
     }
 
@@ -60,9 +67,10 @@ export function LoginPage() {
       }, 500)
     } catch (err) {
       // Handle login error - show error toast
-      const errorMessage = err instanceof Error ? err.message : "Login failed. Please try again."
+      const rawMessage = err instanceof Error ? err.message : t("login.toastErrorDefault")
+      const errorMessage = rawMessage?.includes("Invalid email or password") ? t("login.invalidCredentials") : rawMessage
       setError(errorMessage)
-      toast.error("Login failed", {
+      toast.error(t("login.toastError"), {
         description: errorMessage,
         duration: 4000,
         style: {
@@ -94,7 +102,7 @@ export function LoginPage() {
             fontSize: "18px",
           }}
         >
-          Loading...
+          {t("login.loading")}
         </div>
       </div>
     )
@@ -167,8 +175,8 @@ export function LoginPage() {
                     />
                   </svg>
                 </div>
-                <h1 className="text-3xl text-white mb-2">Welcome Back</h1>
-                <p className="text-sm text-white/90">Sign in to continue your learning journey</p>
+                <h1 className="text-3xl text-white mb-2">{t("login.welcomeBack")}</h1>
+                <p className="text-sm text-white/90">{t("login.signInSubheading")}</p>
               </div>
             </CardHeader>
 
@@ -212,12 +220,14 @@ export function LoginPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="email" style={{ color: "#1E3A8A" }}>
-                    Email or Username
+                    {t("login.emailOrUsername")}
                   </Label>
                   <Input
                     id="email"
                     type="email"
-                    placeholder="Enter your email"
+                    dir="ltr"
+                    lang="en"
+                    placeholder={t("login.enterEmail")}
                     value={email}
                     onChange={(e) => {
                       setEmail(e.target.value)
@@ -230,13 +240,15 @@ export function LoginPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="password" style={{ color: "#1E3A8A" }}>
-                    Password
+                    {t("login.password")}
                   </Label>
                   <div className="relative">
                     <Input
                       id="password"
                       type={showPassword ? "text" : "password"}
-                      placeholder="Enter your password"
+                      dir="ltr"
+                      lang="en"
+                      placeholder={t("login.enterPassword")}
                       value={password}
                       onChange={(e) => {
                         setPassword(e.target.value)
@@ -259,11 +271,11 @@ export function LoginPage() {
                 <div className="text-right">
                   <button
                     type="button"
-                    onClick={() => navigate("/forgot-password")}
+                    onClick={() => navigate(getPath("/forgot-password"))}
                     disabled={isLoading}
                     className="text-sm text-[#3B82F6] hover:text-[#1E3A8A] transition-colors disabled:opacity-50"
                   >
-                    Forgot Password?
+                    {t("login.forgotPassword")}
                   </button>
                 </div>
 
@@ -275,10 +287,10 @@ export function LoginPage() {
                   {isLoading ? (
                     <>
                       <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      Signing In...
+                      {t("login.signingIn")}
                     </>
                   ) : (
-                    "Sign In"
+                    t("login.signIn")
                   )}
                 </Button>
               </form>
@@ -287,7 +299,7 @@ export function LoginPage() {
           </Card>
         </motion.div>
 
-        <p className="text-center text-[#F2F6FF]/60 text-sm mt-6">Secure Login • Professional Platform</p>
+        <p className="text-center text-[#F2F6FF]/60 text-sm mt-6">{t("login.secureLogin")}</p>
       </div>
 
     </div>

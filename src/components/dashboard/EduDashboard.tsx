@@ -298,7 +298,7 @@ const renderReadingDetailedView = (data: any, getOrganizationName: (id: any) => 
   if (detailedResult.ielts_score !== undefined && detailedResult.ielts_score !== null) {
     fieldsToShow.push({
       key: "ielts_score",
-      label: "IELTS Score",
+      label: "IELTS based score",
       getValue: (data) => data.ielts_score || "-"
     })
   }
@@ -488,7 +488,7 @@ const renderListeningDetailedView = (data: any, getOrganizationName: (id: any) =
           { key: "date_time", label: "Date & Time" },
           { key: "conversation_type", label: "Conversation Type" },
           { key: "title", label: "Title" },
-          { key: "ielts_score", label: "IELTS Score" },
+          { key: "ielts_score", label: "IELTS based score" },
         ]
       default:
         return []
@@ -572,7 +572,7 @@ const renderListeningDetailedView = (data: any, getOrganizationName: (id: any) =
   if (detailedResult.ielts_score !== undefined && detailedResult.ielts_score !== null) {
     fieldsToShow.push({
       key: "ielts_score",
-      label: "IELTS Score",
+      label: "IELTS based score",
       getValue: (data) => data.ielts_score || "-"
     })
   }
@@ -719,7 +719,7 @@ const renderSpeakingDetailedView = (data: any, getOrganizationName: (id: any) =>
           { key: "pronunciation_score", label: "Pronunciation Score" },
           { key: "fluency_score", label: "Fluency Score" },
           { key: "grammar_score", label: "Grammar Score" },
-          { key: "ielts_score", label: "IELTS Score" },
+          { key: "ielts_score", label: "IELTS based score" },
         ]
       default:
         return []
@@ -877,7 +877,7 @@ const renderSpeakingDetailedView = (data: any, getOrganizationName: (id: any) =>
   if (detailedResult.ielts_score !== undefined && detailedResult.ielts_score !== null) {
     fieldsToShow.push({
       key: "ielts_score",
-      label: "IELTS Score",
+      label: "IELTS based score",
       getValue: (data) => data.ielts_score || "-"
     })
   }
@@ -1395,20 +1395,20 @@ export function EduDashboard() {
           { key: "pronunciation_score", label: "Pronunciation Score" },
           { key: "fluency_score", label: "Fluency Score" },
           { key: "grammar_score", label: "Grammar Score" },
-          { key: "ielts_score", label: "IELTS Score" },
+          { key: "ielts_score", label: "IELTS based score" },
         ]
       case "writing":
         return [
           { key: "date_time", label: "Date & Time" },
           { key: "title", label: "Title" },
-          { key: "ielts_score", label: "IELTS Score" },
+          { key: "ielts_score", label: "IELTS based score" },
         ]
       case "listening":
         return [
           { key: "date_time", label: "Date & Time" },
           { key: "conversation_type", label: "Conversation Type" },
           { key: "title", label: "Title" },
-          { key: "ielts_score", label: "IELTS Score" },
+          { key: "ielts_score", label: "IELTS based score" },
         ]
       default:
         return []
@@ -1623,7 +1623,7 @@ export function EduDashboard() {
   }
 
   const menuItems = [
-    { id: "english-skill-ai", label: "English Skill AI", icon: Mic2, route: "/skills-home" },
+    { id: "english-pro-ai", label: "English Pro AI", icon: Mic2, route: "/skills-home" },
     { id: "dashboard", label: "Dashboard", icon: Briefcase, route: "/progress-dashboard", active: true },
     { id: "class-management", label: "Class Management", icon: Users, route: "/progress-dashboard/classes" },
     { id: "license-management", label: "License Management", icon: Shield, route: "/progress-dashboard/license" },
@@ -3175,7 +3175,7 @@ export function EduDashboard() {
               }}
               onClick={() => navigate("/skills-home")}
             >
-              ENGLISH SKILL AI
+              English Pro AI
             </h2>
           )}
           <button
@@ -3479,7 +3479,7 @@ export function EduDashboard() {
                 }}
               >
                 <Mic2 style={{ width: "16px", height: "16px", marginRight: "8px" }} />
-                English Skill AI
+                English Pro AI
               </Button>
             </div>
           </div>

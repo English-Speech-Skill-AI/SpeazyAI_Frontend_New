@@ -52,11 +52,27 @@ app.post('/api/support-ticket', express.json({ limit: '30mb' }), async (req, res
 app.post('/api/speech-proxy', async (req, res) => {
   try {
     const incoming = req.body || {};
-    const { endpoint: _ignored, ...apiBody } = incoming;
+    const { endpoint: _ignored, expected_text: expectedText, ...apiBody } = incoming;
 
-    const qsEndpoint = req.query.endpoint;
-    const targetEndpoint =
-      qsEndpoint || "https://apis.languageconfidence.ai/speech-assessment/unscripted/uk";
+    let targetEndpoint =
+      req.query.endpoint ||
+      incoming.endpoint ||
+      "https://apis.languageconfidence.ai/speech-assessment/unscripted/uk";
+    let isScripted = typeof targetEndpoint === "string" && targetEndpoint.includes("speech-assessment/scripted");
+
+    // Rule: only switch from scripted -> unscripted when expected_text is > 300 chars
+    if (isScripted && expectedText != null) {
+      const textForLength = String(expectedText).trim();
+      if (textForLength.length > 300) {
+        targetEndpoint = targetEndpoint.replace("/scripted/", "/unscripted/");
+        isScripted = false;
+      }
+    }
+
+    // For scripted, include expected_text in body; for unscripted, omit it
+    if (isScripted && expectedText != null && String(expectedText).trim() !== "") {
+      apiBody.expected_text = expectedText;
+    }
 
     const apiKey = process.env.LC_API_KEY || process.env.SPEECH_API_KEY;
     
@@ -412,7 +428,7 @@ Be encouraging but honest. Adjust your expectations based on the level (beginner
 app.post('/api/auth-proxy', async (req, res) => {
   try {
     const requestBody = req.body || {};
-    const targetEndpoint = "https://api.exeleratetechnology.com/api/auth/login.php";
+    const targetEndpoint = "https://api.intelliviq.com/api/auth/login.php";
 
     const response = await fetch(targetEndpoint, {
       method: "POST",

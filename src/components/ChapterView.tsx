@@ -7,11 +7,12 @@ import { motion } from "motion/react"
 import { ArrowLeft } from 'lucide-react'
 import { PDFViewer } from "./PDFViewer"
 import { AudioRecorder } from "./audioRecorder"
-import { useNavigate, useParams } from "react-router-dom"
+import { useParams } from "react-router-dom"
+import { useLocalizedNavigate } from "./LocaleLayout"
 import { useLocation } from "react-router-dom"
 
 export function ChapterView() {
-  const navigate = useNavigate()
+  const navigate = useLocalizedNavigate()
   const location = useLocation()
   const { chapterId } = useParams()
 
