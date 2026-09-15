@@ -1,12 +1,32 @@
 // API Configuration - supports DigitalOcean Functions, Netlify Functions, and local dev
 
-const isLocal = import.meta.env.DEV || window.location.hostname === 'localhost';
+const isLocal =
+  import.meta.env.DEV ||
+  (typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'));
 const isNetlify = typeof window !== 'undefined' && window.location.hostname.includes('netlify.app');
 
 // DigitalOcean Function URLs (used when deployed to DigitalOcean App Platform)
 const DO_BASE = 'https://faas-blr1-8177d592.doserverless.co/api/v1/web/fn-a38d3580-f602-4111-8967-d449fc5ef00e/default';
+const DO_SPEECH_PROXY_FALLBACK = `${DO_BASE}/speechProxy`;
+
+/** CI sometimes copies dev .env and bakes localhost or wrong proxy path into the bundle — never use that off this machine. */
+function sanitizeSpeechProxyUrl(candidate: string | undefined, fallback: string): string {
+  const s = String(candidate ?? '').trim();
+  if (!s) return fallback;
+  try {
+    const u = new URL(s);
+    const loopback = u.hostname === 'localhost' || u.hostname === '127.0.0.1';
+    if (loopback && !isLocal) return fallback;
+    return s;
+  } catch {
+    if (!isLocal && /localhost|127\.0\.0\.1/.test(s)) return fallback;
+    return s;
+  }
+}
+
 const DIGITALOCEAN_FUNCTIONS = {
-  speechProxy: import.meta.env.VITE_SPEECH_PROXY_URL || `${DO_BASE}/speechProxy`,
+  speechProxy: sanitizeSpeechProxyUrl(import.meta.env.VITE_SPEECH_PROXY_URL, DO_SPEECH_PROXY_FALLBACK),
   chatgptProxy: import.meta.env.VITE_CHATGPT_PROXY_URL || `${DO_BASE}/chatgptProxy`,
   authProxy: import.meta.env.VITE_AUTH_PROXY_URL || `${DO_BASE}/authProxy`,
   pdfProxy: import.meta.env.VITE_PDF_PROXY_URL || `${DO_BASE}/pdfProxy`,
@@ -17,7 +37,7 @@ const DIGITALOCEAN_FUNCTIONS = {
 
 // Local development proxy URLs (if running proxy servers locally)
 const LOCAL_PROXIES = {
-  speechProxy: 'http://localhost:4000/speechProxy',
+  speechProxy: 'http://localhost:4000/speechProxy', // Language Confidence proxy only (not Azure)
   chatgptProxy: 'http://localhost:4001/chatgptProxy',
   authProxy: 'http://localhost:4001/authProxy',
   pdfProxy: 'http://localhost:4001/pdfProxy',
@@ -41,15 +61,15 @@ const API_PROVIDER = (import.meta.env.VITE_API_PROVIDER || 'digitalocean') as 'd
 
 // Get the appropriate URL based on provider and environment
 function getApiUrl(functionName: keyof typeof DIGITALOCEAN_FUNCTIONS): string {
-  if (isLocal && API_PROVIDER === 'local') {
+  if (API_PROVIDER === 'local' && isLocal) {
     return LOCAL_PROXIES[functionName];
   }
-  
+
   switch (API_PROVIDER) {
     case 'digitalocean':
       return DIGITALOCEAN_FUNCTIONS[functionName];
     case 'local':
-      return LOCAL_PROXIES[functionName];
+      return DIGITALOCEAN_FUNCTIONS[functionName];
     case 'netlify':
       return NETLIFY_FUNCTIONS[functionName];
     default:

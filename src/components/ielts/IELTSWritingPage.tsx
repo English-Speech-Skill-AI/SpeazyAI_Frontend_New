@@ -28,7 +28,8 @@ interface WritingResponse {
 
 
 export function IELTSWritingPage() {
-  const navigate = useNavigate();
+  const { t } = useTranslation();
+  const navigate = useLocalizedNavigate();
   const { token, logout } = useAuth();
   const [items, setItems] = useState<WritingItem[]>([]);
   const [loading, setLoading] = useState(true);
